@@ -1,0 +1,62 @@
+# ===========================================================================
+# Factory Management System — Python dependencies
+# ===========================================================================
+# Install with:
+#   pip install -r requirements.txt
+#
+# Versions are pinned to those confirmed working in this project.
+# To upgrade a package:
+#   pip install --upgrade <package>  →  pin the new version here.
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Core framework
+# ---------------------------------------------------------------------------
+Django==4.2.16               # LTS release — security-supported until April 2026
+
+
+# ---------------------------------------------------------------------------
+# Database driver
+# ---------------------------------------------------------------------------
+mysqlclient==2.2.4           # C-extension MySQL adapter (fastest option).
+                             # Requires the MySQL C headers to be installed:
+                             #   Windows : install MySQL Connector/C
+                             #   Ubuntu  : sudo apt install libmysqlclient-dev
+                             #   macOS   : brew install mysql
+
+
+# ---------------------------------------------------------------------------
+# REST API
+# ---------------------------------------------------------------------------
+djangorestframework==3.15.2  # Toolkit for building Web APIs (DRF)
+
+
+# ---------------------------------------------------------------------------
+# API documentation  (Swagger / OpenAPI / ReDoc)
+# ---------------------------------------------------------------------------
+drf-yasg==1.21.7             # Auto-generates Swagger 2.0 + OpenAPI 3 docs
+                             # from DRF views and serializers.
+PyYAML==6.0.2                # Required by drf-yasg for YAML schema export.
+uritemplate==4.1.1           # Required by drf-yasg for URI templating.
+inflection==0.5.1            # Required by drf-yasg for camelCase conversion.
+packaging==24.1              # Required by drf-yasg for version parsing.
+
+
+# ---------------------------------------------------------------------------
+# Django utilities
+# ---------------------------------------------------------------------------
+sqlparse==0.5.1              # SQL formatter — used internally by Django's
+                             # ORM debug output and --plan command.
+asgiref==3.8.1               # ASGI/WSGI compatibility layer — required
+                             # by Django 4.x for async support.
+
+
+# ---------------------------------------------------------------------------
+# Optional but recommended for development
+# ---------------------------------------------------------------------------
+# Uncomment the lines below when working locally:
+
+# django-extensions==3.2.3   # Extra management commands (shell_plus, etc.)
+# ipython==8.26.0             # Better interactive shell for shell_plus
+# django-debug-toolbar==4.4.6 # In-browser query/performance profiler
