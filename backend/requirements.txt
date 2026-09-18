@@ -50,6 +50,9 @@ sqlparse==0.5.1              # SQL formatter — used internally by Django's
                              # ORM debug output and --plan command.
 asgiref==3.8.1               # ASGI/WSGI compatibility layer — required
                              # by Django 4.x for async support.
+django-cors-headers==4.9.0   # Configures CORS so the React dev server can
+                             # call the API with credentials (session cookie).
+python-dotenv==1.2.3         # Loads DB_* / SECRET_KEY from a local .env file.
 
 
 # ---------------------------------------------------------------------------

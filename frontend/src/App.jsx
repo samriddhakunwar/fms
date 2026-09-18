@@ -1,20 +1,64 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import Login from './pages/Login';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ManagerDashboard from './pages/manager/ManagerDashboard';
-import StaffDashboard from './pages/staff/StaffDashboard';
-import './App.css';
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import Login from "./pages/Login";
+import Unauthorized from "./pages/Unauthorized";
+
+import AdminLayout from "./layouts/AdminLayout";
+import InventoryManagerLayout from "./layouts/InventoryManagerLayout";
+import EmployeeLayout from "./layouts/EmployeeLayout";
+
+import AdminDashboard from "./pages/AdminDashboard";
+import InventoryDashboard from "./pages/InventoryDashboard";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import EmployeeProfile from "./pages/EmployeeProfile";
+import ProductList from "./pages/ProductList";
+import EmployeeList from "./pages/EmployeeList";
+import SalaryList from "./pages/SalaryList";
+import SalesPage from "./pages/SalesPage";
+import ReportsPage from "./pages/ReportsPage";
+import InventoryReport from "./pages/InventoryReport";
+import UserList from "./pages/UserList";
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/manager" element={<ManagerDashboard />} />
-        <Route path="/staff" element={<StaffDashboard />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+
+          <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+            <Route path="/admin-dashboard" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="inventory" element={<ProductList />} />
+              <Route path="employees" element={<EmployeeList />} />
+              <Route path="salary" element={<SalaryList />} />
+              <Route path="sales" element={<SalesPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="users" element={<UserList />} />
+            </Route>
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["INVENTORY_MANAGER"]} />}>
+            <Route path="/inventory-dashboard" element={<InventoryManagerLayout />}>
+              <Route index element={<InventoryDashboard />} />
+              <Route path="products" element={<ProductList />} />
+              <Route path="reports" element={<InventoryReport />} />
+            </Route>
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={["EMPLOYEE"]} />}>
+            <Route path="/employee-dashboard" element={<EmployeeLayout />}>
+              <Route index element={<EmployeeDashboard />} />
+              <Route path="profile" element={<EmployeeProfile />} />
+            </Route>
+          </Route>
+
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

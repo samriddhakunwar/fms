@@ -37,6 +37,11 @@ urlpatterns = [
 
     # API endpoints
     path("api/auth/", include("accounts.api_urls")),
+    path("api/", include("accounts.users_urls")),
+    path("api/", include("inventory.urls")),
+    path("api/", include("employees.urls")),
+    path("api/", include("salary.urls")),
+    path("api/", include("sales.urls")),
 
     # Swagger UI
     path(

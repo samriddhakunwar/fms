@@ -1,5 +1,7 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.utils import timezone
 
 
@@ -102,36 +104,89 @@ class SaleItem(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Custom save that enforces stock constraints and reduces inventory.
+        Custom save that enforces stock constraints and keeps inventory in
+        sync on both creation AND correction of an existing line item.
 
-        Only deducts stock on creation (not on update) to avoid double-
-        deduction if the record is ever re-saved.
+        Every stock read/write happens on a row locked with
+        select_for_update() inside an atomic block, so concurrent sales of
+        the same product can't race past the stock check together. Editing
+        quantity or swapping the product only ever applies the *delta*
+        (never re-deducts the full quantity), so re-saving or admin edits
+        cannot double-deduct or silently corrupt stock.
 
         Raises:
-            ValueError: If there is not enough stock to fulfil the sale.
+            ValueError: If there is not enough stock to fulfil the change.
         """
-        is_new = self.pk is None  # True only when inserting a new record
+        from inventory.models import Product
 
-        if is_new:
-            product = self.product
+        is_new = self.pk is None
 
-            # 1. Guard: ensure sufficient stock exists before proceeding.
-            if self.quantity > product.quantity_in_stock:
-                raise ValueError(
-                    f"Insufficient stock for '{product.product_name}'. "
-                    f"Requested: {self.quantity}, "
-                    f"Available: {product.quantity_in_stock}."
-                )
+        with transaction.atomic():
+            if is_new:
+                product = Product.objects.select_for_update().get(pk=self.product_id)
 
-            # 2. Compute subtotal (quantity × unit_price).
-            self.subtotal = self.quantity * self.unit_price
+                if self.quantity > product.quantity_in_stock:
+                    raise ValueError(
+                        f"Insufficient stock for '{product.product_name}'. "
+                        f"Requested: {self.quantity}, "
+                        f"Available: {product.quantity_in_stock}."
+                    )
 
-            # 3. Deduct sold quantity from inventory.
-            product.quantity_in_stock -= self.quantity
+                self.subtotal = self.quantity * self.unit_price
+                product.quantity_in_stock -= self.quantity
+                product.save(update_fields=["quantity_in_stock", "updated_at"])
+            else:
+                previous = SaleItem.objects.get(pk=self.pk)
 
-            # 4. Persist the updated product stock level.
-            #    The is_low_stock() check can be read by any downstream
-            #    view or signal — no extra flag needed on the model.
-            product.save(update_fields=["quantity_in_stock", "updated_at"])
+                if previous.product_id == self.product_id:
+                    product = Product.objects.select_for_update().get(pk=self.product_id)
+                    delta = self.quantity - previous.quantity  # + means selling more
 
-        super().save(*args, **kwargs)
+                    if delta > 0 and delta > product.quantity_in_stock:
+                        raise ValueError(
+                            f"Insufficient stock for '{product.product_name}'. "
+                            f"Additional units requested: {delta}, "
+                            f"Available: {product.quantity_in_stock}."
+                        )
+
+                    product.quantity_in_stock -= delta
+                    product.save(update_fields=["quantity_in_stock", "updated_at"])
+                else:
+                    old_product = Product.objects.select_for_update().get(
+                        pk=previous.product_id
+                    )
+                    old_product.quantity_in_stock += previous.quantity
+                    old_product.save(update_fields=["quantity_in_stock", "updated_at"])
+
+                    new_product = Product.objects.select_for_update().get(
+                        pk=self.product_id
+                    )
+                    if self.quantity > new_product.quantity_in_stock:
+                        raise ValueError(
+                            f"Insufficient stock for '{new_product.product_name}'. "
+                            f"Requested: {self.quantity}, "
+                            f"Available: {new_product.quantity_in_stock}."
+                        )
+                    new_product.quantity_in_stock -= self.quantity
+                    new_product.save(update_fields=["quantity_in_stock", "updated_at"])
+
+                self.subtotal = self.quantity * self.unit_price
+
+            super().save(*args, **kwargs)
+
+
+@receiver(pre_delete, sender=SaleItem)
+def restore_stock_on_saleitem_delete(sender, instance, **kwargs):
+    """
+    Restores the sold quantity back to the product whenever a line item is
+    removed — whether that happens through the API (deleting a Sale cascades
+    to its items) or through Django Admin. Runs inside the same atomic block
+    as the delete so a failed delete can't leave stock adjusted without the
+    row actually being removed.
+    """
+    from inventory.models import Product
+
+    with transaction.atomic():
+        product = Product.objects.select_for_update().get(pk=instance.product_id)
+        product.quantity_in_stock += instance.quantity
+        product.save(update_fields=["quantity_in_stock", "updated_at"])

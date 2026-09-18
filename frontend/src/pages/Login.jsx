@@ -1,53 +1,88 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-const accounts = {
-  'admin@gmail.com': { password: 'admin123', role: 'admin' },
-  'manager@gmail.com': { password: 'manager123', role: 'manager' },
-  'staff@gmail.com': { password: 'staff123', role: 'staff' },
-};
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { ROLE_DASHBOARD_PATH } from "../routes/roleRoutes";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const { login, isAuthenticated, role, loading } = useAuth();
 
-  const submit = (event) => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!loading && isAuthenticated) {
+    return <Navigate to={ROLE_DASHBOARD_PATH[role] || "/login"} replace />;
+  }
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const account = accounts[form.email];
+    setError("");
+    setSubmitting(true);
 
-    if (!account || account.password !== form.password) {
-      setError('Please check your email and password.');
+    const result = await login(username, password);
+
+    setSubmitting(false);
+
+    if (!result.success) {
+      setError(result.message || "Invalid username or password.");
       return;
     }
-    navigate(`/${account.role}`);
+
+    navigate(ROLE_DASHBOARD_PATH[result.role] || "/login", { replace: true });
   };
 
   return (
-    <main className="login-page">
-      <section className="login-intro">
-        <div className="brand"><span className="brand-mark">F</span> Factory Management System</div>
+    <div className="d-flex justify-content-center align-items-center vh-100 bg-light px-3">
+      <div className="card shadow-sm" style={{ maxWidth: "400px", width: "100%" }}>
+        <div className="card-body p-4">
+          <h1 className="h4 mb-1 text-center">Factory Management System</h1>
+          <p className="text-muted text-center mb-4">Sign in to continue</p>
 
-        <div className="intro-copy">
-          <span className="eyebrow">Factory management system</span>
-          <h1>Run the factory floor with clarity.</h1>
-          <p>One simple workspace for inventory, customer orders, sales activity, and your team.</p>
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="mb-3">
+              <label htmlFor="username" className="form-label">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                className="form-control"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </div>
+
+            <div className="mb-3">
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="form-control"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="alert alert-danger py-2" role="alert">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+              {submitting ? "Signing in…" : "Login"}
+            </button>
+          </form>
         </div>
-      </section>
-
-      <section className="login-panel">
-        <form className="login-card" onSubmit={submit}>
-          <span className="eyebrow">Welcome back</span>
-          <h2>Sign in to Factory Management System</h2>
-
-          <label>Email address<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-
-          <label>Password<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>
-
-          {error && <p className="form-error">{error}</p>}
-          <button className="primary-button" type="submit">Sign in <span>→</span></button>
-        </form>
-      </section>
-    </main>
-  )
+      </div>
+    </div>
+  );
 }

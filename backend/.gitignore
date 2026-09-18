@@ -72,6 +72,7 @@ Thumbs.db
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # Python packaging
 pip-wheel-metadata/

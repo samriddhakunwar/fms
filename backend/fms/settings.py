@@ -10,7 +10,10 @@ For the full list of settings and their values, see:
     https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # ---------------------------------------------------------------------------
 # Base directory
@@ -18,17 +21,22 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / ".env")
+
 
 # ---------------------------------------------------------------------------
 # Security
 # ---------------------------------------------------------------------------
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w*to0-*9cejm84mg+b@$ji0)1l&5&hb3e6^l%wuolr!zylq=(i'
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-w*to0-*9cejm84mg+b@$ji0)1l&5&hb3e6^l%wuolr!zylq=(i",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +55,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'rest_framework',   # Django REST Framework
     'drf_yasg',         # Swagger / OpenAPI docs
+    'corsheaders',      # CORS support for the React dev server
 ]
 
 # Project-specific apps — each represents a bounded domain in the factory.
@@ -75,6 +84,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # ---------------------------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -119,22 +129,15 @@ WSGI_APPLICATION = 'fms.wsgi.application'
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-# Using SQLite for development. Switch to PostgreSQL for production.
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "fms_db",
-        "USER": "root",
-        "PASSWORD": "SAMriddha1",
-        "HOST": "localhost",
-        "PORT": "3306",
+        "NAME": os.environ.get("DB_NAME", "fms_db"),
+        "USER": os.environ.get("DB_USER", "root"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "3306"),
     }
 }
 
@@ -207,3 +210,19 @@ SWAGGER_SETTINGS = {
         'Session': {'type': 'apiKey', 'in': 'cookie', 'name': 'sessionid'},
     },
 }
+
+
+# ---------------------------------------------------------------------------
+# CORS / CSRF — allows the React dev server to call the API with the
+# session cookie attached (credentials: 'include' / axios withCredentials).
+# ---------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
