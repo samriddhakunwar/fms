@@ -55,6 +55,7 @@ class Employee(models.Model):
     )
 
     class Meta:
+        db_table = "employee"
         verbose_name = "Employee"
         verbose_name_plural = "Employees"
         ordering = ["full_name"]

@@ -1,8 +1,13 @@
 -- ===========================================================================
 -- Factory Management System (fms_db) — schema
--- Generated from the live local MySQL database via mysqldump --no-data.
+-- Generated from the live local MySQL database via SHOW CREATE TABLE.
 -- Matches manage.py migrate exactly — verified column-for-column,
 -- index-for-index, constraint-for-constraint against a fresh migrate run.
+--
+-- Table names are the readable ones set via Meta.db_table / db_table on the
+-- M2M fields (employee, product, salary_payment, sale, sale_item, user,
+-- user_group, user_permission). Django's own auth_*/django_* tables keep
+-- their framework names.
 --
 -- Run with:
 --   mysql -u root -p < database_schema.sql
@@ -19,7 +24,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ---------------------------------------------------------------------------
 -- Django built-in tables
 -- ---------------------------------------------------------------------------
-
 CREATE TABLE `django_content_type` (
   `id` int NOT NULL AUTO_INCREMENT,
   `app_label` varchar(100) NOT NULL,
@@ -75,8 +79,7 @@ CREATE TABLE `auth_group_permissions` (
 -- ---------------------------------------------------------------------------
 -- accounts app (custom User model, AUTH_USER_MODEL = 'accounts.User')
 -- ---------------------------------------------------------------------------
-
-CREATE TABLE `accounts_user` (
+CREATE TABLE `user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `password` varchar(128) NOT NULL,
   `last_login` datetime(6) DEFAULT NULL,
@@ -94,7 +97,7 @@ CREATE TABLE `accounts_user` (
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE `accounts_user_groups` (
+CREATE TABLE `user_group` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
   `group_id` int NOT NULL,
@@ -102,10 +105,10 @@ CREATE TABLE `accounts_user_groups` (
   UNIQUE KEY `accounts_user_groups_user_id_group_id_59c0b32f_uniq` (`user_id`,`group_id`),
   KEY `accounts_user_groups_group_id_bd11a704_fk_auth_group_id` (`group_id`),
   CONSTRAINT `accounts_user_groups_group_id_bd11a704_fk_auth_group_id` FOREIGN KEY (`group_id`) REFERENCES `auth_group` (`id`),
-  CONSTRAINT `accounts_user_groups_user_id_52b62117_fk_accounts_user_id` FOREIGN KEY (`user_id`) REFERENCES `accounts_user` (`id`)
+  CONSTRAINT `accounts_user_groups_user_id_52b62117_fk_accounts_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE `accounts_user_user_permissions` (
+CREATE TABLE `user_permission` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
   `permission_id` int NOT NULL,
@@ -113,7 +116,7 @@ CREATE TABLE `accounts_user_user_permissions` (
   UNIQUE KEY `accounts_user_user_permi_user_id_permission_id_2ab516c2_uniq` (`user_id`,`permission_id`),
   KEY `accounts_user_user_p_permission_id_113bb443_fk_auth_perm` (`permission_id`),
   CONSTRAINT `accounts_user_user_p_permission_id_113bb443_fk_auth_perm` FOREIGN KEY (`permission_id`) REFERENCES `auth_permission` (`id`),
-  CONSTRAINT `accounts_user_user_p_user_id_e4f0a161_fk_accounts_` FOREIGN KEY (`user_id`) REFERENCES `accounts_user` (`id`)
+  CONSTRAINT `accounts_user_user_p_user_id_e4f0a161_fk_accounts_` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `django_admin_log` (
@@ -127,17 +130,16 @@ CREATE TABLE `django_admin_log` (
   `user_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
   KEY `django_admin_log_content_type_id_c4bce8eb_fk_django_co` (`content_type_id`),
-  KEY `django_admin_log_user_id_c564eba6_fk_accounts_user_id` (`user_id`),
+  KEY `django_admin_log_user_id_c564eba6_fk_user_id` (`user_id`),
   CONSTRAINT `django_admin_log_content_type_id_c4bce8eb_fk_django_co` FOREIGN KEY (`content_type_id`) REFERENCES `django_content_type` (`id`),
-  CONSTRAINT `django_admin_log_user_id_c564eba6_fk_accounts_user_id` FOREIGN KEY (`user_id`) REFERENCES `accounts_user` (`id`),
+  CONSTRAINT `django_admin_log_user_id_c564eba6_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
   CONSTRAINT `django_admin_log_chk_1` CHECK ((`action_flag` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------------------
 -- employees app
 -- ---------------------------------------------------------------------------
-
-CREATE TABLE `employees_employee` (
+CREATE TABLE `employee` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `full_name` varchar(255) NOT NULL,
   `email` varchar(254) NOT NULL,
@@ -154,8 +156,7 @@ CREATE TABLE `employees_employee` (
 -- ---------------------------------------------------------------------------
 -- inventory app
 -- ---------------------------------------------------------------------------
-
-CREATE TABLE `inventory_product` (
+CREATE TABLE `product` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `product_name` varchar(255) NOT NULL,
   `description` longtext NOT NULL,
@@ -167,15 +168,14 @@ CREATE TABLE `inventory_product` (
   `updated_at` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sku` (`sku`),
-  CONSTRAINT `inventory_product_chk_1` CHECK ((`quantity_in_stock` >= 0)),
-  CONSTRAINT `inventory_product_chk_2` CHECK ((`minimum_stock_level` >= 0))
+  CONSTRAINT `product_chk_1` CHECK ((`quantity_in_stock` >= 0)),
+  CONSTRAINT `product_chk_2` CHECK ((`minimum_stock_level` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------------------
 -- salary app
 -- ---------------------------------------------------------------------------
-
-CREATE TABLE `salary_salarypayment` (
+CREATE TABLE `salary_payment` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `amount` decimal(12,2) NOT NULL,
   `payment_date` datetime(6) NOT NULL,
@@ -183,15 +183,14 @@ CREATE TABLE `salary_salarypayment` (
   `remarks` longtext NOT NULL,
   `employee_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `salary_salarypayment_employee_id_b6da0e89_fk_employees` (`employee_id`),
-  CONSTRAINT `salary_salarypayment_employee_id_b6da0e89_fk_employees` FOREIGN KEY (`employee_id`) REFERENCES `employees_employee` (`id`)
+  KEY `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` (`employee_id`),
+  CONSTRAINT `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employee` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------------------
 -- sales app
 -- ---------------------------------------------------------------------------
-
-CREATE TABLE `sales_sale` (
+CREATE TABLE `sale` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `invoice_number` varchar(50) NOT NULL,
   `total_amount` decimal(14,2) NOT NULL,
@@ -199,11 +198,11 @@ CREATE TABLE `sales_sale` (
   `sold_by_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_number` (`invoice_number`),
-  KEY `sales_sale_sold_by_id_c69f0cbe_fk_accounts_user_id` (`sold_by_id`),
-  CONSTRAINT `sales_sale_sold_by_id_c69f0cbe_fk_accounts_user_id` FOREIGN KEY (`sold_by_id`) REFERENCES `accounts_user` (`id`)
+  KEY `sales_sale_sold_by_id_c69f0cbe_fk_user_id` (`sold_by_id`),
+  CONSTRAINT `sales_sale_sold_by_id_c69f0cbe_fk_user_id` FOREIGN KEY (`sold_by_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE `sales_saleitem` (
+CREATE TABLE `sale_item` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `quantity` int unsigned NOT NULL,
   `unit_price` decimal(12,2) NOT NULL,
@@ -211,11 +210,11 @@ CREATE TABLE `sales_saleitem` (
   `product_id` bigint NOT NULL,
   `sale_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `sales_saleitem_product_id_aeb6c9cd_fk_inventory_product_id` (`product_id`),
+  KEY `sales_saleitem_product_id_aeb6c9cd_fk_product_id` (`product_id`),
   KEY `sales_saleitem_sale_id_56e67045_fk_sales_sale_id` (`sale_id`),
-  CONSTRAINT `sales_saleitem_product_id_aeb6c9cd_fk_inventory_product_id` FOREIGN KEY (`product_id`) REFERENCES `inventory_product` (`id`),
-  CONSTRAINT `sales_saleitem_sale_id_56e67045_fk_sales_sale_id` FOREIGN KEY (`sale_id`) REFERENCES `sales_sale` (`id`),
-  CONSTRAINT `sales_saleitem_chk_1` CHECK ((`quantity` >= 0))
+  CONSTRAINT `sales_saleitem_product_id_aeb6c9cd_fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
+  CONSTRAINT `sales_saleitem_sale_id_56e67045_fk_sales_sale_id` FOREIGN KEY (`sale_id`) REFERENCES `sale` (`id`),
+  CONSTRAINT `sale_item_chk_1` CHECK ((`quantity` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

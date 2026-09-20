@@ -42,6 +42,7 @@ class SalaryPayment(models.Model):
     )
 
     class Meta:
+        db_table = "salary_payment"
         verbose_name = "Salary Payment"
         verbose_name_plural = "Salary Payments"
         ordering = ["-payment_date"]
