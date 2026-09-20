@@ -34,6 +34,7 @@ class Sale(models.Model):
     )
 
     class Meta:
+        db_table = "sale"
         verbose_name = "Sale"
         verbose_name_plural = "Sales"
         ordering = ["-sale_date"]
@@ -88,6 +89,7 @@ class SaleItem(models.Model):
     )
 
     class Meta:
+        db_table = "sale_item"
         verbose_name = "Sale Item"
         verbose_name_plural = "Sale Items"
         ordering = ["id"]

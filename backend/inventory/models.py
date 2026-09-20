@@ -48,6 +48,7 @@ class Product(models.Model):
     )
 
     class Meta:
+        db_table = "product"
         verbose_name = "Product"
         verbose_name_plural = "Products"
         ordering = ["product_name"]
