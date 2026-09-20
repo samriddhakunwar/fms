@@ -1,5 +1,52 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
 
+/* ---------------------------------------------------------------------------
+ * Design tokens
+ *
+ * Every hue here is the one the app already used — Bootstrap's palette plus
+ * the existing page background and ink. Nothing is re-hued; the tints are
+ * alpha/mixes of those same colours so badges and hovers stay on-theme.
+ * ------------------------------------------------------------------------- */
+:root {
+  --fms-ink: #18212b;
+  --fms-ink-soft: #5b6774;
+  --fms-ink-faint: #8b95a1;
+
+  --fms-page: #f6f8fa;
+  --fms-surface: #ffffff;
+  --fms-line: #e6eaef;
+  --fms-line-soft: #eef1f5;
+
+  --fms-primary: #0d6efd;
+  /* Bootstrap's own darker steps of the same blue — used for the login
+     backdrop so it deepens the theme rather than introducing a new hue. */
+  --fms-primary-deep: #0a58ca;
+  --fms-primary-deeper: #084298;
+  --fms-success: #198754;
+  --fms-warning: #ffc107;
+  --fms-danger: #dc3545;
+  --fms-dark: #212529;
+
+  /* Tints derived from the colours above */
+  --fms-primary-wash: rgba(13, 110, 253, 0.08);
+  --fms-primary-ring: rgba(13, 110, 253, 0.18);
+  --fms-success-wash: #e7f4ed;
+  --fms-success-ink: #146942;
+  --fms-warning-wash: #fff6dc;
+  --fms-warning-ink: #7a5300;
+  --fms-danger-wash: #fdeced;
+
+  --fms-radius: 12px;
+  --fms-radius-sm: 8px;
+
+  --fms-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04),
+    0 1px 3px rgba(16, 24, 40, 0.06);
+  --fms-shadow: 0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 12px rgba(16, 24, 40, 0.07);
+  --fms-shadow-lg: 0 2px 4px rgba(16, 24, 40, 0.04),
+    0 12px 32px rgba(16, 24, 40, 0.1);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -8,15 +55,410 @@ body {
   margin: 0;
   min-width: 320px;
   font-family: "DM Sans", sans-serif;
-  color: #18212b;
-  background: #f6f8fa;
+  color: var(--fms-ink);
+  background: var(--fms-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+ * Typography — Manrope was already being fetched but never applied.
+ * ------------------------------------------------------------------------- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.navbar-brand {
+  font-family: "Manrope", "DM Sans", sans-serif;
+  color: var(--fms-ink);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.text-muted {
+  color: var(--fms-ink-soft) !important;
+}
+
+/* Numbers line up column-to-column instead of drifting. */
+td,
+th,
+.card h3 {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Top bar
+ * ------------------------------------------------------------------------- */
+.navbar.bg-dark {
+  background: var(--fms-dark) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 12px rgba(16, 24, 40, 0.16);
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+/* The shared heading rule above sets a dark ink colour; the brand sits on the
+   dark bar, so it keeps Bootstrap's light text. */
+.navbar-dark .navbar-brand,
+.navbar.bg-dark .navbar-brand {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------------------
+ * Sidebar
+ * ------------------------------------------------------------------------- */
+aside.bg-light {
+  background: var(--fms-surface) !important;
+  border-right: 1px solid var(--fms-line) !important;
+}
+
+aside .nav-link {
+  border-radius: var(--fms-radius-sm);
+  padding: 0.55rem 0.8rem;
+  font-weight: 500;
+  color: var(--fms-ink-soft) !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+aside .nav-link:hover {
+  background: var(--fms-primary-wash);
+  color: var(--fms-primary) !important;
+}
+
+aside .nav-link.active {
+  background: var(--fms-primary);
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.32);
+}
+
+/* ---------------------------------------------------------------------------
+ * Cards
+ * ------------------------------------------------------------------------- */
+.card {
+  border: 1px solid var(--fms-line);
+  border-radius: var(--fms-radius);
+  background: var(--fms-surface);
+}
+
+.card.shadow-sm {
+  box-shadow: var(--fms-shadow) !important;
+}
+
+.card-body {
+  padding: 1.15rem 1.25rem;
+}
+
+/* Dashboard stat tiles: the number carries the card. */
+.card h3 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.card h3 + p.small {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fms-ink-faint) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tables — lighter rules, roomier rows, quiet column headers.
+ * ------------------------------------------------------------------------- */
+.table {
+  --bs-table-border-color: var(--fms-line-soft);
+  border-color: var(--fms-line-soft);
+  margin-bottom: 0;
+}
+
+.table > thead th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fms-ink-faint);
+  background: transparent;
+  border-bottom: 1px solid var(--fms-line);
+  padding: 0.7rem 0.85rem;
+  white-space: nowrap;
+}
+
+.table > tbody td {
+  padding: 0.8rem 0.85rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--fms-line-soft);
+  color: var(--fms-ink);
+}
+
+.table > tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table > tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+.table > tbody tr:hover {
+  background: var(--fms-primary-wash);
+}
+
+/* Wrap bare tables in the same surface treatment the cards get. */
+.table-responsive {
+  background: var(--fms-surface);
+  border: 1px solid var(--fms-line);
+  border-radius: var(--fms-radius);
+  box-shadow: var(--fms-shadow-sm);
+  /* Bootstrap's own overflow-x: auto stays in force — it is what lets wide
+     tables scroll on narrow screens, and it already clips the corners. */
+}
+
+/* ---------------------------------------------------------------------------
+ * Badges — same green/amber/red, as soft pills rather than solid blocks.
+ * ------------------------------------------------------------------------- */
+.badge {
+  border-radius: 999px;
+  padding: 0.34em 0.7em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.badge.bg-success {
+  background: var(--fms-success-wash) !important;
+  color: #146942 !important;
+}
+
+.badge.bg-warning {
+  background: var(--fms-warning-wash) !important;
+  color: var(--fms-warning-ink) !important;
+}
+
+.badge.bg-danger {
+  background: var(--fms-danger-wash) !important;
+  color: #b02a37 !important;
+}
+
+.badge.bg-secondary {
+  background: #eef1f5 !important;
+  color: var(--fms-ink-soft) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------------- */
+.btn {
+  border-radius: var(--fms-radius-sm);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: transform 0.12s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--fms-primary);
+  border-color: var(--fms-primary);
+  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.24);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 3px 10px rgba(13, 110, 253, 0.3);
+}
+
+.btn-sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+/* Row actions read as quiet links until you reach for them. */
+.table .btn-outline-primary,
+.table .btn-outline-danger {
+  border-color: transparent;
+  background: transparent;
+}
+
+.table .btn-outline-primary {
+  color: var(--fms-primary);
+}
+
+.table .btn-outline-primary:hover {
+  background: var(--fms-primary-wash);
+  border-color: transparent;
+  color: var(--fms-primary);
+}
+
+.table .btn-outline-danger {
+  color: var(--fms-danger);
+}
+
+.table .btn-outline-danger:hover {
+  background: var(--fms-danger-wash);
+  border-color: transparent;
+  color: #b02a37;
+}
+
+/* ---------------------------------------------------------------------------
+ * Forms
+ * ------------------------------------------------------------------------- */
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--fms-ink-soft);
+  margin-bottom: 0.35rem;
+}
+
+.form-control,
+.form-select {
+  border-radius: var(--fms-radius-sm);
+  border-color: var(--fms-line);
+  padding: 0.5rem 0.75rem;
+  color: var(--fms-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control::placeholder {
+  color: var(--fms-ink-faint);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--fms-primary);
+  box-shadow: 0 0 0 3px var(--fms-primary-ring);
+}
+
+/* A single, consistent keyboard-focus ring everywhere. */
+.btn:focus-visible,
+.nav-link:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--fms-primary-ring);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tabs (Reports)
+ * ------------------------------------------------------------------------- */
+.nav-tabs {
+  border-bottom: 1px solid var(--fms-line);
+  gap: 0.15rem;
+}
+
+.nav-tabs .nav-link {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-weight: 600;
+  color: var(--fms-ink-soft);
+  padding: 0.6rem 0.9rem;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--fms-primary);
+  border-bottom-color: var(--fms-primary-ring);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--fms-primary);
+  background: transparent;
+  border-bottom-color: var(--fms-primary);
+}
+
+/* ---------------------------------------------------------------------------
+ * Alerts
+ * ------------------------------------------------------------------------- */
+.alert {
+  border-radius: var(--fms-radius-sm);
+  border-width: 1px;
+  font-size: 0.9rem;
+}
+
+.alert-danger {
+  background: var(--fms-danger-wash);
+  border-color: rgba(220, 53, 69, 0.22);
+  color: #b02a37;
+}
+
+/* ---------------------------------------------------------------------------
+ * Login — the one full-page surface, so it carries the brand blue outright.
+ * The card stays white so the form keeps its dark-on-light contrast.
+ * ------------------------------------------------------------------------- */
+.vh-100.bg-light {
+  background: var(--fms-page) !important;
+}
+
+.vh-100.bg-light .card {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: var(--fms-shadow-lg) !important;
+  /* Clips the headline band to the card's rounded top corners. */
+  overflow: hidden;
+}
+
+/* The headline sits on the brand blue, bled out to the card's edges so it
+   reads as a header band. The negative margins cancel .card-body's p-4
+   (1.5rem), which is the padding this card actually uses. */
+.vh-100.bg-light .card h1 {
+  margin: -1.5rem -1.5rem 1.15rem;
+  padding: 1.15rem 1.5rem;
+  background: linear-gradient(
+    135deg,
+    var(--fms-primary) 0%,
+    var(--fms-primary-deep) 100%
+  );
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------------------------
+ * Scrollbars + motion
+ * ------------------------------------------------------------------------- */
+main::-webkit-scrollbar,
+aside::-webkit-scrollbar {
+  width: 10px;
+}
+
+main::-webkit-scrollbar-thumb,
+aside::-webkit-scrollbar-thumb {
+  background: #d9dfe6;
+  border: 3px solid var(--fms-page);
+  border-radius: 999px;
+}
+
+main::-webkit-scrollbar-thumb:hover {
+  background: #c3ccd6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
