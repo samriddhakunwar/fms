@@ -26,11 +26,9 @@ schema_view = get_schema_view(
 # URL patterns
 # ---------------------------------------------------------------------------
 urlpatterns = [
-    # Root → redirect to login
-    path("", lambda request: redirect("accounts:login"), name="root"),
-
-    # HTML application
-    path("", include("accounts.urls")),
+    # Root → redirect to the API docs. There is no server-rendered UI; the
+    # React app in ../frontend is the only front end.
+    path("", lambda request: redirect("schema-swagger-ui"), name="root"),
 
     # Django admin panel
     path("admin/", admin.site.urls),

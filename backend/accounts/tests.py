@@ -72,25 +72,6 @@ class AuthApiTests(APITestCase):
         after_logout = self.client.get(reverse("api_auth_me"))
         self.assertEqual(after_logout.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_each_role_only_reaches_its_own_html_dashboard(self):
-        self.client.login(username="employee_user", password=self.password)
-
-        own_dashboard = self.client.get(reverse("accounts:employee_dashboard"))
-        self.assertEqual(own_dashboard.status_code, status.HTTP_200_OK)
-
-        admin_dashboard = self.client.get(reverse("accounts:admin_dashboard"))
-        self.assertEqual(admin_dashboard.status_code, status.HTTP_302_FOUND)
-
-        inventory_dashboard = self.client.get(
-            reverse("accounts:inventory_dashboard")
-        )
-        self.assertEqual(inventory_dashboard.status_code, status.HTTP_302_FOUND)
-
-    def test_unauthenticated_user_redirected_from_dashboards(self):
-        response = self.client.get(reverse("accounts:admin_dashboard"))
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertIn(reverse("accounts:login"), response.url)
-
 
 class UserManagementApiTests(APITestCase):
     def setUp(self):

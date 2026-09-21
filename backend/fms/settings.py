@@ -106,7 +106,9 @@ ROOT_URLCONF = 'fms.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Global templates directory
+        # No project-level templates; Django admin and Swagger supply their
+        # own via APP_DIRS below.
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
