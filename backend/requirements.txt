@@ -56,6 +56,15 @@ python-dotenv==1.2.3         # Loads DB_* / SECRET_KEY from a local .env file.
 
 
 # ---------------------------------------------------------------------------
+# Timezone data
+# ---------------------------------------------------------------------------
+pytz==2026.3.post1           # Timezone definitions — pulled in by DRF and
+                             # drf-yasg for datetime field handling.
+tzdata==2026.3               # IANA timezone database — required by Django on
+                             # Windows, which has no system tz database.
+
+
+# ---------------------------------------------------------------------------
 # Optional but recommended for development
 # ---------------------------------------------------------------------------
 # Uncomment the lines below when working locally:
@@ -63,3 +72,4 @@ python-dotenv==1.2.3         # Loads DB_* / SECRET_KEY from a local .env file.
 # django-extensions==3.2.3   # Extra management commands (shell_plus, etc.)
 # ipython==8.26.0             # Better interactive shell for shell_plus
 # django-debug-toolbar==4.4.6 # In-browser query/performance profiler
+# pyflakes==3.4.0             # Static checker for unused imports / undefined names
