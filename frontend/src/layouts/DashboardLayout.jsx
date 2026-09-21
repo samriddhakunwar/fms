@@ -21,7 +21,7 @@ export default function DashboardLayout({ title, navItems, children }) {
 
   return (
     <div className="d-flex flex-column vh-100">
-      <nav className="navbar navbar-dark bg-dark px-3 flex-shrink-0">
+      <nav className="navbar navbar-dark bg-primary px-3 flex-shrink-0">
         <button
           className="btn btn-outline-light d-lg-none me-2"
           type="button"

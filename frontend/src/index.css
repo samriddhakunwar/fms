@@ -107,8 +107,8 @@ th,
 /* ---------------------------------------------------------------------------
  * Top bar
  * ------------------------------------------------------------------------- */
-.navbar.bg-dark {
-  background: var(--fms-dark) !important;
+.navbar.bg-primary {
+  background: var(--fms-primary) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 1px 12px rgba(16, 24, 40, 0.16);
   padding-top: 0.84rem;
@@ -120,9 +120,9 @@ th,
 }
 
 /* The shared heading rule above sets a dark ink colour; the brand sits on the
-   dark bar, so it keeps Bootstrap's light text. */
+   blue bar, so it keeps Bootstrap's light text. */
 .navbar-dark .navbar-brand,
-.navbar.bg-dark .navbar-brand {
+.navbar.bg-primary .navbar-brand {
   color: #fff;
   font-size: 1.26rem;
   font-weight: 800;
@@ -131,18 +131,30 @@ th,
 
 /* The bar's contents are scaled by the same 1.2 factor as its padding, so the
    whole top bar grows as one piece instead of gaining empty space. */
-.navbar.bg-dark .btn-sm {
+.navbar.bg-primary .btn-sm {
   padding: 0.36rem 0.78rem;
   font-size: 0.98rem;
 }
 
-.navbar.bg-dark .btn:not(.btn-sm) {
+.navbar.bg-primary .btn:not(.btn-sm) {
   padding: 0.45rem 0.9rem;
   font-size: 1.2rem;
 }
 
-.navbar.bg-dark .small {
+.navbar.bg-primary .small {
   font-size: 1.05rem;
+}
+
+/* At the larger size the long brand would push the logout button onto a second
+   row on phones. Keep the bar to a single row and let the title ellipsise. */
+.navbar.bg-primary {
+  flex-wrap: nowrap;
+}
+
+.navbar.bg-primary .navbar-brand {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------------------------------------------------------------------------
