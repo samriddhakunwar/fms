@@ -17,19 +17,19 @@
   --fms-line: #e6eaef;
   --fms-line-soft: #eef1f5;
 
-  --fms-primary: #0d6efd;
+  --fms-primary: #0a58ca;
   /* Bootstrap's own darker steps of the same blue — used for the login
      backdrop so it deepens the theme rather than introducing a new hue. */
-  --fms-primary-deep: #0a58ca;
-  --fms-primary-deeper: #084298;
+  --fms-primary-deep: #084298;
+  --fms-primary-deeper: #052c65;
   --fms-success: #198754;
   --fms-warning: #ffc107;
   --fms-danger: #dc3545;
   --fms-dark: #212529;
 
   /* Tints derived from the colours above */
-  --fms-primary-wash: rgba(13, 110, 253, 0.08);
-  --fms-primary-ring: rgba(13, 110, 253, 0.18);
+  --fms-primary-wash: rgba(10, 88, 202, 0.08);
+  --fms-primary-ring: rgba(10, 88, 202, 0.18);
   --fms-success-wash: #e7f4ed;
   --fms-success-ink: #146942;
   --fms-warning-wash: #fff6dc;
@@ -38,6 +38,16 @@
 
   --fms-radius: 12px;
   --fms-radius-sm: 8px;
+
+  /* Bridge the blue into Bootstrap's own primary. Bootstrap hardcodes the
+     stock #0d6efd in several component rules, so without this the spinner,
+     links and checkboxes would keep the old lighter blue. */
+  --bs-primary: #0a58ca;
+  --bs-primary-rgb: 10, 88, 202;
+  --bs-link-color: #0a58ca;
+  --bs-link-color-rgb: 10, 88, 202;
+  --bs-link-hover-color: #084298;
+  --bs-link-hover-color-rgb: 8, 66, 152;
 
   --fms-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04),
     0 1px 3px rgba(16, 24, 40, 0.06);
@@ -179,10 +189,68 @@ aside .nav-link:hover {
 }
 
 aside .nav-link.active {
+  /* .nav-pills .nav-link.active outranks this selector, so the colour has to
+     go through Bootstrap's own variable or the pill keeps the stock blue. */
+  --bs-nav-pills-link-active-bg: var(--fms-primary);
   background: var(--fms-primary);
   color: #fff !important;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.32);
+  box-shadow: 0 1px 2px rgba(10, 88, 202, 0.32);
+}
+
+/* ---------------------------------------------------------------------------
+ * Page header — the title row that carries the Add action. It reuses the top
+ * bar's blue so a list page reads as one surface with the chrome above it.
+ * ------------------------------------------------------------------------- */
+.page-head {
+  background: var(--fms-primary);
+  border-radius: var(--fms-radius);
+  padding: 0.85rem 1.15rem;
+  box-shadow: 0 1px 2px rgba(10, 88, 202, 0.24);
+}
+
+.page-head h2 {
+  color: #fff;
+}
+
+/* A blue-on-blue primary button would vanish, so the Add action inverts to a
+   white chip. The label uses the deeper blue for legible contrast on white. */
+.page-head .btn-primary {
+  background: #fff;
+  border-color: #fff;
+  color: var(--fms-primary-deep);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
+}
+
+.page-head .btn-primary:hover,
+.page-head .btn-primary:focus {
+  background: #fff;
+  border-color: #fff;
+  color: var(--fms-primary-deeper);
+  box-shadow: 0 3px 10px rgba(16, 24, 40, 0.18);
+}
+
+/* ---------------------------------------------------------------------------
+ * Modals — the Add / Edit / Delete dialogs take the same blue header, so the
+ * action that opened them and the dialog itself match.
+ * ------------------------------------------------------------------------- */
+.modal-header {
+  background: var(--fms-primary);
+  border-bottom-color: transparent;
+}
+
+.modal-header .modal-title {
+  color: #fff;
+  font-weight: 700;
+}
+
+.modal-header .btn-close {
+  --bs-btn-close-filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.85;
+}
+
+.modal-header .btn-close:hover {
+  opacity: 1;
 }
 
 /* ---------------------------------------------------------------------------
@@ -317,11 +385,11 @@ aside .nav-link.active {
 .btn-primary {
   background: var(--fms-primary);
   border-color: var(--fms-primary);
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.24);
+  box-shadow: 0 1px 2px rgba(10, 88, 202, 0.24);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 3px 10px rgba(13, 110, 253, 0.3);
+  box-shadow: 0 3px 10px rgba(10, 88, 202, 0.3);
 }
 
 .btn-sm {
@@ -354,6 +422,28 @@ aside .nav-link.active {
   background: var(--fms-danger-wash);
   border-color: transparent;
   color: #b02a37;
+}
+
+/* Bootstrap writes the stock blue straight into these two, so they need the
+   token restating rather than inheriting it. */
+.btn-outline-primary {
+  --bs-btn-color: var(--fms-primary);
+  --bs-btn-border-color: var(--fms-primary);
+  --bs-btn-hover-bg: var(--fms-primary);
+  --bs-btn-hover-border-color: var(--fms-primary);
+  --bs-btn-active-bg: var(--fms-primary-deep);
+  --bs-btn-active-border-color: var(--fms-primary-deep);
+  --bs-btn-focus-shadow-rgb: 10, 88, 202;
+}
+
+.form-check-input:checked {
+  background-color: var(--fms-primary);
+  border-color: var(--fms-primary);
+}
+
+.form-check-input:focus {
+  border-color: var(--fms-primary);
+  box-shadow: 0 0 0 3px var(--fms-primary-ring);
 }
 
 /* ---------------------------------------------------------------------------

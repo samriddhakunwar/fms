@@ -115,7 +115,7 @@ export default function EmployeeList() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Employees</h2>
         <button className="btn btn-primary" onClick={openAddForm}>
           + Add Employee
