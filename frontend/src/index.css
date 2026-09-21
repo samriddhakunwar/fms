@@ -22,6 +22,11 @@
      backdrop so it deepens the theme rather than introducing a new hue. */
   --fms-primary-deep: #084298;
   --fms-primary-deeper: #052c65;
+  /* The top bar and the selected sidebar item are set deliberately, off the
+     primary ramp above: a deep navy bar with a brighter selected pill. */
+  --fms-nav: #052f6e;
+  --fms-nav-active: #3081f9;
+
   --fms-success: #198754;
   --fms-warning: #ffc107;
   --fms-danger: #dc3545;
@@ -118,7 +123,7 @@ th,
  * Top bar
  * ------------------------------------------------------------------------- */
 .navbar.bg-primary {
-  background: var(--fms-primary) !important;
+  background: var(--fms-nav) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 1px 12px rgba(16, 24, 40, 0.16);
   padding-top: 0.84rem;
@@ -191,11 +196,11 @@ aside .nav-link:hover {
 aside .nav-link.active {
   /* .nav-pills .nav-link.active outranks this selector, so the colour has to
      go through Bootstrap's own variable or the pill keeps the stock blue. */
-  --bs-nav-pills-link-active-bg: var(--fms-primary);
-  background: var(--fms-primary);
+  --bs-nav-pills-link-active-bg: var(--fms-nav-active);
+  background: var(--fms-nav-active);
   color: #fff !important;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(10, 88, 202, 0.32);
+  box-shadow: 0 1px 2px rgba(48, 129, 249, 0.32);
 }
 
 /* ---------------------------------------------------------------------------
