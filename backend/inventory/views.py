@@ -2,7 +2,7 @@ from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdminOrInventoryManager
+from accounts.permissions import IsAdminOrInventoryManagerOrEmployeeReadOnly
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -10,15 +10,15 @@ from .serializers import ProductSerializer
 
 class ProductViewSet(viewsets.ModelViewSet):
     """
-    Finished-products inventory CRUD.
+    Finished-products inventory.
 
-    Restricted to ADMIN and INVENTORY_MANAGER — Employees have no access,
-    matching the role matrix in the project spec.
+    ADMIN and INVENTORY_MANAGER get full CRUD. EMPLOYEE is read-only: they
+    can see stock levels but cannot add, update or delete items.
     """
 
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrInventoryManager]
+    permission_classes = [IsAdminOrInventoryManagerOrEmployeeReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["product_name", "sku"]
     ordering_fields = ["product_name", "selling_price", "quantity_in_stock", "created_at"]

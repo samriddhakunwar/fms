@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api, { getErrorMessage } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const EMPTY_FORM = {
   product_name: "",
@@ -17,6 +18,11 @@ const STATUS_BADGE = {
 };
 
 export default function ProductList() {
+  // Employees reach this page read-only. The API enforces that too — this
+  // just stops the UI offering actions that would be rejected.
+  const { role } = useAuth();
+  const canManage = role === "ADMIN" || role === "INVENTORY_MANAGER";
+
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -121,9 +127,11 @@ export default function ProductList() {
     <>
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Inventory</h2>
-        <button className="btn btn-primary" onClick={openAddForm}>
-          + Add Product
-        </button>
+        {canManage && (
+          <button className="btn btn-primary" onClick={openAddForm}>
+            + Add Product
+          </button>
+        )}
       </div>
 
       <form className="row g-2 mb-3" onSubmit={handleSearchSubmit}>
@@ -159,19 +167,19 @@ export default function ProductList() {
               <th>Stock</th>
               <th>Minimum Stock</th>
               <th>Status</th>
-              <th>Actions</th>
+              {canManage && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center py-4">
+                <td colSpan={canManage ? 7 : 6} className="text-center py-4">
                   Loading…
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-4 text-muted">
+                <td colSpan={canManage ? 7 : 6} className="text-center py-4 text-muted">
                   No products found.
                 </td>
               </tr>
@@ -188,20 +196,22 @@ export default function ProductList() {
                     <td>
                       <span className={`badge ${badge.className}`}>{badge.label}</span>
                     </td>
-                    <td className="text-nowrap">
-                      <button
-                        className="btn btn-sm btn-outline-primary me-2"
-                        onClick={() => openEditForm(product)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => setDeleteTarget(product)}
-                      >
-                        Delete
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td className="text-nowrap">
+                        <button
+                          className="btn btn-sm btn-outline-primary me-2"
+                          onClick={() => openEditForm(product)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => setDeleteTarget(product)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })

@@ -7,7 +7,7 @@ authorization boundary and must be attached to every future endpoint that
 is role-restricted.
 """
 
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from .models import User
 
@@ -54,3 +54,24 @@ class IsAdminOrInventoryManager(BasePermission):
             and request.user.is_authenticated
             and request.user.role in (User.Role.ADMIN, User.Role.INVENTORY_MANAGER)
         )
+
+
+class IsAdminOrInventoryManagerOrEmployeeReadOnly(BasePermission):
+    """
+    Admin and Inventory Manager get full CRUD. Employees may read only —
+    they need to see what is in stock, but must not add, update or delete
+    items. Anonymous users get nothing.
+    """
+
+    message = "Employees may only view inventory, not change it."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not (user and user.is_authenticated):
+            return False
+
+        if user.role in (User.Role.ADMIN, User.Role.INVENTORY_MANAGER):
+            return True
+
+        return user.role == User.Role.EMPLOYEE and request.method in SAFE_METHODS

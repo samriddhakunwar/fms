@@ -41,10 +41,42 @@ class ProductApiTests(APITestCase):
             (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
         )
 
-    def test_employee_cannot_access_products(self):
+    def test_employee_can_view_products(self):
         self.client.login(username="employee_user", password=self.password)
         response = self.client.get(reverse("product-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_employee_can_view_single_product(self):
+        self.client.login(username="employee_user", password=self.password)
+        response = self.client.get(
+            reverse("product-detail", args=[self.product.id])
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["sku"], "SKU-CHAIR")
+
+    def test_employee_cannot_create_product(self):
+        self.client.login(username="employee_user", password=self.password)
+        response = self.client.post(
+            reverse("product-list"),
+            {
+                "product_name": "Table",
+                "sku": "SKU-TABLE",
+                "selling_price": "2000.00",
+                "quantity_in_stock": 10,
+                "minimum_stock_level": 2,
+            },
+        )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Product.objects.count(), 1)
+
+    def test_employee_cannot_delete_product(self):
+        self.client.login(username="employee_user", password=self.password)
+        response = self.client.delete(
+            reverse("product-detail", args=[self.product.id])
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Product.objects.count(), 1)
 
     def test_inventory_manager_can_list_products(self):
         self.client.login(username="manager_user", password=self.password)
