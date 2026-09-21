@@ -111,8 +111,12 @@ th,
   background: var(--fms-dark) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 1px 12px rgba(16, 24, 40, 0.16);
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
+  padding-top: 0.84rem;
+  padding-bottom: 0.84rem;
+  /* Bootstrap's own brand padding, scaled by the same 1.2 — the brand is the
+     tallest thing in the bar, so leaving this at its default would hold the
+     height back. */
+  --bs-navbar-brand-padding-y: 0.375rem;
 }
 
 /* The shared heading rule above sets a dark ink colour; the brand sits on the
@@ -120,9 +124,25 @@ th,
 .navbar-dark .navbar-brand,
 .navbar.bg-dark .navbar-brand {
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1.26rem;
   font-weight: 800;
   letter-spacing: -0.01em;
+}
+
+/* The bar's contents are scaled by the same 1.2 factor as its padding, so the
+   whole top bar grows as one piece instead of gaining empty space. */
+.navbar.bg-dark .btn-sm {
+  padding: 0.36rem 0.78rem;
+  font-size: 0.98rem;
+}
+
+.navbar.bg-dark .btn:not(.btn-sm) {
+  padding: 0.45rem 0.9rem;
+  font-size: 1.2rem;
+}
+
+.navbar.bg-dark .small {
+  font-size: 1.05rem;
 }
 
 /* ---------------------------------------------------------------------------

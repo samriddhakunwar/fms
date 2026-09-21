@@ -1,7 +1,9 @@
 import axios from "axios";
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+// Relative by default so requests stay same-origin (the dev server proxies
+// /api to Django). Set VITE_API_BASE_URL to an absolute URL for deployments
+// where the API is not served from the same origin as the app.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
