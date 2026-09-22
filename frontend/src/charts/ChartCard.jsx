@@ -3,7 +3,15 @@
  * chart can be in before it has data. Keeping the height fixed across states
  * stops the dashboard reflowing as each request lands.
  */
-export default function ChartCard({ title, subtitle, loading, error, empty, children }) {
+export default function ChartCard({
+  title,
+  subtitle,
+  loading,
+  error,
+  empty,
+  emptyMessage,
+  children,
+}) {
   return (
     <div className="card shadow-sm h-100">
       <div className="card-body d-flex flex-column">
@@ -18,7 +26,9 @@ export default function ChartCard({ title, subtitle, loading, error, empty, chil
           ) : error ? (
             <span className="text-muted small">{error}</span>
           ) : empty ? (
-            <span className="text-muted small">No data to chart yet.</span>
+            <span className="text-muted small">
+              {emptyMessage ?? "No data to chart yet."}
+            </span>
           ) : (
             <div className="w-100">{children}</div>
           )}

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import SalesReportTable from "./reports/SalesReportTable";
+import SalesReport from "./reports/SalesReport";
 
 const TABS = [
-  { key: "sales", label: "Sales Report", Component: SalesReportTable },
+  { key: "sales", label: "Sales Report", Component: SalesReport },
 ];
 
 export default function ReportsPage() {

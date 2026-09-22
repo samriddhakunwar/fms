@@ -159,3 +159,39 @@ function shortDay(iso) {
   const [, month, day] = iso.split("-");
   return `${day}/${month}`;
 }
+
+/**
+ * Headline numbers for a bucketed daily series — the figures the Sales Report
+ * leads with above its charts.
+ *
+ * The extremes are read off the same buckets the charts plot, so a tile and a
+ * bar can never disagree. "Quietest day" looks only at days that had a sale:
+ * over a wide range most empty days are days the factory was simply closed, and
+ * a min of zero would say nothing.
+ */
+export function salesStats(series) {
+  const active = series.filter((day) => day.count > 0);
+
+  const totalSales = series.reduce((sum, day) => sum + day.count, 0);
+  const totalRevenue = series.reduce((sum, day) => sum + day.revenue, 0);
+
+  const maxBy = (key) =>
+    active.reduce((best, day) => (day[key] > best[key] ? day : best), active[0]);
+  const minBy = (key) =>
+    active.reduce((worst, day) => (day[key] < worst[key] ? day : worst), active[0]);
+
+  return {
+    days: series.length,
+    activeDays: active.length,
+    totalSales,
+    totalRevenue: Number(totalRevenue.toFixed(2)),
+    // Averaged over every day in the window, not just the selling ones — the
+    // window is the period the report is about.
+    avgDailyRevenue: series.length
+      ? Number((totalRevenue / series.length).toFixed(2))
+      : 0,
+    busiestDay: active.length ? maxBy("count") : null,
+    quietestDay: active.length ? minBy("count") : null,
+    bestRevenueDay: active.length ? maxBy("revenue") : null,
+  };
+}
