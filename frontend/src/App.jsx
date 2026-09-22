@@ -15,6 +15,7 @@ import EmployeeProfile from "./pages/EmployeeProfile";
 import ProductList from "./pages/ProductList";
 import EmployeeList from "./pages/EmployeeList";
 import SalaryList from "./pages/SalaryList";
+import OrdersPage from "./pages/OrdersPage";
 import SalesPage from "./pages/SalesPage";
 import ReportsPage from "./pages/ReportsPage";
 import UserList from "./pages/UserList";
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="inventory" element={<ProductList />} />
               <Route path="employees" element={<EmployeeList />} />
               <Route path="salary" element={<SalaryList />} />
+              <Route path="orders" element={<OrdersPage />} />
               <Route path="sales" element={<SalesPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="users" element={<UserList />} />
@@ -43,6 +45,13 @@ export default function App() {
             <Route path="/inventory-dashboard" element={<InventoryManagerLayout />}>
               <Route index element={<InventoryDashboard />} />
               <Route path="products" element={<ProductList />} />
+              <Route path="orders" element={<OrdersPage />} />
+              {/* Sales and staff records are read-only for this
+                  role: the pages hide every write action and the
+                  API refuses one if it is called directly. */}
+              <Route path="sales" element={<SalesPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="staff" element={<EmployeeList />} />
             </Route>
           </Route>
 

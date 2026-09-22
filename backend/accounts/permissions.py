@@ -101,3 +101,30 @@ class IsAdminOrInventoryManagerReadOnly(BasePermission):
             user.role == User.Role.INVENTORY_MANAGER
             and request.method in SAFE_METHODS
         )
+
+
+class IsAdminOrInventoryManagerNoUpdate(BasePermission):
+    """
+    Admin gets full CRUD. Inventory Manager may create, read and delete but
+    never update.
+
+    Used by the orders endpoints: the role matrix lets a manager raise and
+    cancel an order but gives them no amend rights, so PUT/PATCH is refused
+    here rather than merely hidden in the React UI. Employees get nothing.
+    """
+
+    message = "Inventory Managers may not update orders."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not (user and user.is_authenticated):
+            return False
+
+        if user.role == User.Role.ADMIN:
+            return True
+
+        return (
+            user.role == User.Role.INVENTORY_MANAGER
+            and request.method not in ("PUT", "PATCH")
+        )

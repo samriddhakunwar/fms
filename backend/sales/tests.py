@@ -169,13 +169,130 @@ class SaleApiTests(APITestCase):
             Decimal("500.00") * 2 + Decimal("2000.00"),
         )
 
-    def test_update_endpoint_not_allowed(self):
+    def _record_sale(self, quantity=1):
+        """Creates an invoice for `quantity` chairs and returns its id."""
+        response = self.client.post(
+            reverse("sale-list"),
+            {
+                "sold_to": "Shyam Pvt. Ltd.",
+                "items_input": [{"product": self.chair.id, "quantity": quantity}],
+            },
+            format="json",
+        )
+        return response.data["id"]
+
+    def test_admin_can_correct_an_invoice_header(self):
         self._login_admin()
-        payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 1}]}
-        create_response = self.client.post(reverse("sale-list"), payload, format="json")
-        sale_id = create_response.data["id"]
+        sale_id = self._record_sale()
+
+        response = self.client.patch(
+            reverse("sale-detail", args=[sale_id]),
+            {"sold_to": "Shyam Industries Pvt. Ltd."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["sold_to"], "Shyam Industries Pvt. Ltd.")
+
+        # Header-only edits must leave the line items and stock alone.
+        self.chair.refresh_from_db()
+        self.assertEqual(self.chair.quantity_in_stock, 49)
+
+    def test_admin_can_rewrite_line_items_and_stock_follows(self):
+        self._login_admin()
+        sale_id = self._record_sale(quantity=5)
+        self.chair.refresh_from_db()
+        self.assertEqual(self.chair.quantity_in_stock, 45)
 
         response = self.client.put(
-            reverse("sale-detail", args=[sale_id]), {}, format="json"
+            reverse("sale-detail", args=[sale_id]),
+            {
+                "sold_to": "Shyam Pvt. Ltd.",
+                "items_input": [{"product": self.chair.id, "quantity": 2}],
+            },
+            format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Decimal(response.data["total_amount"]), Decimal("1000.00"))
+
+        # 3 of the 5 chairs come back to stock.
+        self.chair.refresh_from_db()
+        self.assertEqual(self.chair.quantity_in_stock, 48)
+
+    def test_invoice_number_and_date_survive_an_update(self):
+        self._login_admin()
+        sale_id = self._record_sale()
+        original = self.client.get(reverse("sale-detail", args=[sale_id])).data
+
+        response = self.client.patch(
+            reverse("sale-detail", args=[sale_id]),
+            {"invoice_number": "INV-TAMPERED", "sold_to": "Renamed Ltd."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["invoice_number"], original["invoice_number"])
+        self.assertEqual(response.data["sale_date"], original["sale_date"])
+
+    def test_update_that_outruns_stock_changes_nothing(self):
+        self._login_admin()
+        sale_id = self._record_sale(quantity=5)
+
+        response = self.client.put(
+            reverse("sale-detail", args=[sale_id]),
+            {
+                "sold_to": "Shyam Pvt. Ltd.",
+                "items_input": [{"product": self.chair.id, "quantity": 500}],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        sale = Sale.objects.get(pk=sale_id)
+        self.assertEqual(sale.total_amount, Decimal("2500.00"))
+        self.assertEqual(sale.items.count(), 1)
+        self.chair.refresh_from_db()
+        self.assertEqual(self.chair.quantity_in_stock, 45)
+
+    def test_manager_can_read_sales_but_never_write_them(self):
+        """The whole Manager sales rule, enforced at the API not the UI."""
+        self._login_admin()
+        sale_id = self._record_sale()
+        self.client.logout()
+
+        manager = User.objects.create_user(
+            username="manager_user",
+            password=self.password,
+            role=User.Role.INVENTORY_MANAGER,
+        )
+        self.client.login(username=manager.username, password=self.password)
+
+        self.assertEqual(
+            self.client.get(reverse("sale-list")).status_code, status.HTTP_200_OK
+        )
+
+        create = self.client.post(
+            reverse("sale-list"),
+            {
+                "sold_to": "Manager Ltd.",
+                "items_input": [{"product": self.chair.id, "quantity": 1}],
+            },
+            format="json",
+        )
+        self.assertEqual(create.status_code, status.HTTP_403_FORBIDDEN)
+
+        for method in ("put", "patch"):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(
+                    reverse("sale-detail", args=[sale_id]),
+                    {"sold_to": "Manager Ltd."},
+                    format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        delete = self.client.delete(reverse("sale-detail", args=[sale_id]))
+        self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Sale.objects.filter(pk=sale_id).exists())
+
+    def test_employee_cannot_even_read_sales(self):
+        self.client.login(username="employee_user", password=self.password)
+        response = self.client.get(reverse("sale-list"))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

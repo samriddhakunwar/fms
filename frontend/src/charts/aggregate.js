@@ -89,44 +89,20 @@ export function topProductsByStock(products, limit = 8) {
 }
 
 /**
- * Same daily revenue/count buckets as dailySalesSeries, but spanning an
- * explicit date range instead of a window ending today — so the Sales Report
- * charts cover exactly the period its filters select and stay in step with the
- * table beneath them.
+ * Adds the display fields to a day series built by the API.
  *
- * With neither bound set the report is unfiltered, so this falls through to
- * dailySalesSeries and shows the same last-7-days view as the dashboard. A
- * half-open range is closed off with the earliest sale on hand, or today.
+ * The Sales Report gets its buckets from /reports/sales/ so the tiles, the
+ * charts and the product breakdown are all the same arithmetic done once on
+ * the server. All this does is attach the axis label and turn the decimal
+ * strings DRF sends into numbers the charts can plot.
  */
-export function salesSeriesForRange(sales, startDate, endDate, days = 7) {
-  if (!startDate && !endDate) return dailySalesSeries(sales, days);
-
-  const saleDays = sales
-    .filter((sale) => sale.sale_date)
-    .map((sale) => isoDay(new Date(sale.sale_date)))
-    .sort();
-
-  const start = startDate || saleDays[0] || isoDay(new Date());
-  const end = endDate || saleDays[saleDays.length - 1] || isoDay(new Date());
-
-  // A backwards range selects nothing; an empty series renders as the
-  // "no data" state rather than a chart with no bars.
-  if (start > end) return [];
-
-  return bucketByDay(sales, daysBetween(start, end));
-}
-
-/** Every ISO day from start to end inclusive, capped so the axis stays legible. */
-function daysBetween(startIso, endIso, limit = 180) {
-  const keys = [];
-  const cursor = new Date(`${startIso}T00:00:00`);
-  const last = new Date(`${endIso}T00:00:00`);
-
-  while (cursor <= last && keys.length < limit) {
-    keys.push(isoDay(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return keys;
+export function labelDays(days) {
+  return days.map((day) => ({
+    day: day.day,
+    label: shortDay(day.day),
+    revenue: Number(day.revenue),
+    count: day.count,
+  }));
 }
 
 /** Totals each sale into its day bucket; days with no sales stay at zero. */
@@ -160,38 +136,3 @@ function shortDay(iso) {
   return `${day}/${month}`;
 }
 
-/**
- * Headline numbers for a bucketed daily series — the figures the Sales Report
- * leads with above its charts.
- *
- * The extremes are read off the same buckets the charts plot, so a tile and a
- * bar can never disagree. "Quietest day" looks only at days that had a sale:
- * over a wide range most empty days are days the factory was simply closed, and
- * a min of zero would say nothing.
- */
-export function salesStats(series) {
-  const active = series.filter((day) => day.count > 0);
-
-  const totalSales = series.reduce((sum, day) => sum + day.count, 0);
-  const totalRevenue = series.reduce((sum, day) => sum + day.revenue, 0);
-
-  const maxBy = (key) =>
-    active.reduce((best, day) => (day[key] > best[key] ? day : best), active[0]);
-  const minBy = (key) =>
-    active.reduce((worst, day) => (day[key] < worst[key] ? day : worst), active[0]);
-
-  return {
-    days: series.length,
-    activeDays: active.length,
-    totalSales,
-    totalRevenue: Number(totalRevenue.toFixed(2)),
-    // Averaged over every day in the window, not just the selling ones — the
-    // window is the period the report is about.
-    avgDailyRevenue: series.length
-      ? Number((totalRevenue / series.length).toFixed(2))
-      : 0,
-    busiestDay: active.length ? maxBy("count") : null,
-    quietestDay: active.length ? minBy("count") : null,
-    bestRevenueDay: active.length ? maxBy("revenue") : null,
-  };
-}

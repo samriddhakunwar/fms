@@ -34,6 +34,7 @@ class EmployeeAdmin(admin.ModelAdmin):
 
     list_display = (
         "full_name",
+        "user",
         "designation",
         "email",
         "phone",
@@ -54,10 +55,15 @@ class EmployeeAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "full_name",    # Search by employee name
-        "email",        # Search by email address
-        "designation",  # Search by job title
+        "full_name",       # Search by employee name
+        "email",           # Search by email address
+        "designation",     # Search by job title
+        "user__username",  # Search by the linked login account
     )
+
+    # A factory can have hundreds of accounts; a search popup beats a
+    # hundred-row <select>.
+    raw_id_fields = ("user",)
 
     actions = ("deactivate_employees", "reactivate_employees")
 
@@ -128,6 +134,16 @@ class EmployeeAdmin(admin.ModelAdmin):
                     "email",
                     "phone",
                     "address",
+                ),
+            },
+        ),
+        (
+            "Login Account",
+            {
+                "fields": ("user",),
+                "description": (
+                    "Link the employee's login account so they can see their "
+                    "own profile in the app. Optional."
                 ),
             },
         ),

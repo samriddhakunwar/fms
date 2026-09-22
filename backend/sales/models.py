@@ -29,6 +29,20 @@ class Sale(models.Model):
         default=timezone.now,
         verbose_name="Sale Date",
     )
+    order = models.OneToOneField(
+        "orders.Order",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sale",
+        verbose_name="Order",
+        help_text=(
+            "The customer order this invoice was raised from, if any. Walk-in "
+            "sales recorded directly have no order behind them, so this is "
+            "optional; if the order is later removed the invoice survives "
+            "without it."
+        ),
+    )
 
     class Meta:
         db_table = "sale"

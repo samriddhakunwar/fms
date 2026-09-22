@@ -79,6 +79,7 @@ class SaleAdmin(admin.ModelAdmin):
     list_display = (
         "invoice_number",
         "sold_to",       # Customer the invoice was issued to
+        "order",         # The customer order this invoice came from, if any
         "total_amount",
         "sale_date",
     )
@@ -108,6 +109,8 @@ class SaleAdmin(admin.ModelAdmin):
     # not typed in manually.
     readonly_fields = ("invoice_number", "sale_date", "total_amount")
 
+    raw_id_fields = ("order",)
+
     fieldsets = (
         (
             "Invoice Header",
@@ -115,6 +118,7 @@ class SaleAdmin(admin.ModelAdmin):
                 "fields": (
                     "invoice_number",
                     "sold_to",
+                    "order",
                     "sale_date",
                 ),
             },

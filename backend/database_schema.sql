@@ -5,9 +5,13 @@
 -- index-for-index, constraint-for-constraint against a fresh migrate run.
 --
 -- Table names are the readable ones set via Meta.db_table / db_table on the
--- M2M fields (employee, product, salary_payment, sale, sale_item, user,
--- user_group, user_permission). Django's own auth_*/django_* tables keep
--- their framework names.
+-- M2M fields (customer_order, customer_order_item, employee, product,
+-- salary_payment, sale, sale_item, user, user_group, user_permission).
+-- Django's own auth_*/django_* tables keep their framework names.
+--
+-- Orders and sales are separate tables on purpose: an order records what the
+-- customer asked for and moves no stock, and `sale`.`order_id` points back at
+-- the order an invoice was raised from (NULL for a direct sale).
 --
 -- Run with:
 --   mysql -u root -p < database_schema.sql
@@ -21,9 +25,11 @@ USE `fms_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
--- ---------------------------------------------------------------------------
+
+-- -------------------------------------------------------------------------
 -- Django built-in tables
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+
 CREATE TABLE `django_content_type` (
   `id` int NOT NULL AUTO_INCREMENT,
   `app_label` varchar(100) NOT NULL,
@@ -76,9 +82,10 @@ CREATE TABLE `auth_group_permissions` (
   CONSTRAINT `auth_group_permissions_group_id_b120cbf9_fk_auth_group_id` FOREIGN KEY (`group_id`) REFERENCES `auth_group` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- ---------------------------------------------------------------------------
--- accounts app (custom User model, AUTH_USER_MODEL = 'accounts.User')
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+-- accounts app (custom user model)
+-- -------------------------------------------------------------------------
+
 CREATE TABLE `user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `password` varchar(128) NOT NULL,
@@ -136,9 +143,10 @@ CREATE TABLE `django_admin_log` (
   CONSTRAINT `django_admin_log_chk_1` CHECK ((`action_flag` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
 -- employees app
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+
 CREATE TABLE `employee` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `full_name` varchar(255) NOT NULL,
@@ -149,13 +157,17 @@ CREATE TABLE `employee` (
   `joining_date` date NOT NULL,
   `salary` decimal(12,2) NOT NULL,
   `status` varchar(10) NOT NULL,
+  `user_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `user_id` (`user_id`),
+  CONSTRAINT `employee_user_id_cc4f5a1c_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
 -- inventory app
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+
 CREATE TABLE `product` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `product_name` varchar(255) NOT NULL,
@@ -166,15 +178,49 @@ CREATE TABLE `product` (
   `minimum_stock_level` int unsigned NOT NULL,
   `created_at` datetime(6) NOT NULL,
   `updated_at` datetime(6) NOT NULL,
+  `is_active` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sku` (`sku`),
   CONSTRAINT `product_chk_1` CHECK ((`quantity_in_stock` >= 0)),
   CONSTRAINT `product_chk_2` CHECK ((`minimum_stock_level` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+-- orders app
+-- -------------------------------------------------------------------------
+
+CREATE TABLE `customer_order` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `order_number` varchar(50) NOT NULL,
+  `customer_name` varchar(255) NOT NULL,
+  `status` varchar(20) NOT NULL,
+  `total_amount` decimal(14,2) NOT NULL,
+  `order_date` datetime(6) NOT NULL,
+  `expected_delivery_date` date DEFAULT NULL,
+  `notes` longtext NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `order_number` (`order_number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `customer_order_item` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `quantity` int unsigned NOT NULL,
+  `unit_price` decimal(12,2) NOT NULL,
+  `subtotal` decimal(14,2) NOT NULL,
+  `order_id` bigint NOT NULL,
+  `product_id` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `customer_order_item_order_id_0d213d76_fk_customer_order_id` (`order_id`),
+  KEY `customer_order_item_product_id_a8dfa297_fk_product_id` (`product_id`),
+  CONSTRAINT `customer_order_item_order_id_0d213d76_fk_customer_order_id` FOREIGN KEY (`order_id`) REFERENCES `customer_order` (`id`),
+  CONSTRAINT `customer_order_item_product_id_a8dfa297_fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
+  CONSTRAINT `customer_order_item_chk_1` CHECK ((`quantity` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- -------------------------------------------------------------------------
 -- salary app
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+
 CREATE TABLE `salary_payment` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `amount` decimal(12,2) NOT NULL,
@@ -187,19 +233,21 @@ CREATE TABLE `salary_payment` (
   CONSTRAINT `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employee` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
 -- sales app
--- ---------------------------------------------------------------------------
+-- -------------------------------------------------------------------------
+
 CREATE TABLE `sale` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `invoice_number` varchar(50) NOT NULL,
   `total_amount` decimal(14,2) NOT NULL,
   `sale_date` datetime(6) NOT NULL,
-  `sold_by_id` bigint NOT NULL,
+  `sold_to` varchar(255) NOT NULL,
+  `order_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_number` (`invoice_number`),
-  KEY `sales_sale_sold_by_id_c69f0cbe_fk_user_id` (`sold_by_id`),
-  CONSTRAINT `sales_sale_sold_by_id_c69f0cbe_fk_user_id` FOREIGN KEY (`sold_by_id`) REFERENCES `user` (`id`)
+  UNIQUE KEY `order_id` (`order_id`),
+  CONSTRAINT `sale_order_id_269295d8_fk_customer_order_id` FOREIGN KEY (`order_id`) REFERENCES `customer_order` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `sale_item` (
@@ -216,5 +264,6 @@ CREATE TABLE `sale_item` (
   CONSTRAINT `sales_saleitem_sale_id_56e67045_fk_sales_sale_id` FOREIGN KEY (`sale_id`) REFERENCES `sale` (`id`),
   CONSTRAINT `sale_item_chk_1` CHECK ((`quantity` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 
 SET FOREIGN_KEY_CHECKS = 1;

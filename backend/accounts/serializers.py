@@ -1,3 +1,5 @@
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import User
@@ -42,6 +44,14 @@ class UserManagementSerializer(serializers.ModelSerializer):
             "password",
         ]
         read_only_fields = ["id", "date_joined"]
+
+    def validate_password(self, value):
+        """Runs Django's configured password validators, not just a length check."""
+        try:
+            validate_password(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages))
+        return value
 
     def create(self, validated_data):
         password = validated_data.pop("password", None)

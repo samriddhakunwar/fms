@@ -64,7 +64,8 @@ PROJECT_APPS = [
     'inventory.apps.InventoryConfig',  # Finished-goods inventory
     'employees.apps.EmployeesConfig',  # Employee records
     'salary.apps.SalaryConfig',        # Salary payment records
-    'sales.apps.SalesConfig',          # Sales transactions
+    'orders.apps.OrdersConfig',        # Customer orders (pre-invoice)
+    'sales.apps.SalesConfig',          # Sales transactions (invoices)
     'reports.apps.ReportsConfig',      # Reporting (no DB models)
 ]
 

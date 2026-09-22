@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import api, { getErrorMessage } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 function emptyLine() {
   return { product: "", quantity: 1 };
 }
 
 export default function SalesPage() {
+  // Inventory Managers reach this page read-only: they may see invoices but
+  // never record, correct or delete one. The API refuses every write from them
+  // too — this only stops the UI offering what would be rejected.
+  const { role } = useAuth();
+  const canManage = role === "ADMIN";
+
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
@@ -15,12 +22,15 @@ export default function SalesPage() {
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [soldTo, setSoldTo] = useState("");
   const [lines, setLines] = useState([emptyLine()]);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [viewSale, setViewSale] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadSales = async (params = {}) => {
     setLoading(true);
@@ -59,8 +69,24 @@ export default function SalesPage() {
   };
 
   const openForm = () => {
+    setEditingId(null);
     setSoldTo("");
     setLines([emptyLine()]);
+    setFormError("");
+    setShowForm(true);
+  };
+
+  const openEditForm = (sale) => {
+    setEditingId(sale.id);
+    setSoldTo(sale.sold_to);
+    setLines(
+      sale.items.length
+        ? sale.items.map((item) => ({
+            product: String(item.product),
+            quantity: item.quantity,
+          }))
+        : [emptyLine()]
+    );
     setFormError("");
     setShowForm(true);
   };
@@ -100,15 +126,23 @@ export default function SalesPage() {
       return;
     }
 
+    const payload = {
+      sold_to: soldTo.trim(),
+      items_input: validLines.map((line) => ({
+        product: Number(line.product),
+        quantity: Number(line.quantity),
+      })),
+    };
+
     setSaving(true);
     try {
-      await api.post("/sales/", {
-        sold_to: soldTo.trim(),
-        items_input: validLines.map((line) => ({
-          product: Number(line.product),
-          quantity: Number(line.quantity),
-        })),
-      });
+      if (editingId) {
+        // Rewriting the lines returns the old quantities to stock and deducts
+        // the new ones server-side, so the product list is reloaded as well.
+        await api.put(`/sales/${editingId}/`, payload);
+      } else {
+        await api.post("/sales/", payload);
+      }
       setShowForm(false);
       await Promise.all([loadSales(), loadProducts()]);
     } catch (err) {
@@ -118,13 +152,31 @@ export default function SalesPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/sales/${deleteTarget.id}/`);
+      setDeleteTarget(null);
+      // Deleting an invoice puts its quantities back into stock.
+      await Promise.all([loadSales(), loadProducts()]);
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <>
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Sales</h2>
-        <button className="btn btn-primary" onClick={openForm}>
-          + New Sale
-        </button>
+        {canManage && (
+          <button className="btn btn-primary" onClick={openForm}>
+            + New Sale
+          </button>
+        )}
       </div>
 
       <form className="row g-2 mb-3" onSubmit={applyFilters}>
@@ -197,13 +249,29 @@ export default function SalesPage() {
                   <td>{sale.sold_to}</td>
                   <td>{Number(sale.total_amount).toFixed(2)}</td>
                   <td>{new Date(sale.sale_date).toLocaleString()}</td>
-                  <td>
+                  <td className="text-nowrap">
                     <button
-                      className="btn btn-sm btn-outline-secondary"
+                      className="btn btn-sm btn-outline-secondary me-2"
                       onClick={() => setViewSale(sale)}
                     >
                       View
                     </button>
+                    {canManage && (
+                      <>
+                        <button
+                          className="btn btn-sm btn-outline-primary me-2"
+                          onClick={() => openEditForm(sale)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => setDeleteTarget(sale)}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))
@@ -219,7 +287,9 @@ export default function SalesPage() {
               <div className="modal-content">
                 <form onSubmit={handleSubmit}>
                   <div className="modal-header">
-                    <h5 className="modal-title">New Sale</h5>
+                    <h5 className="modal-title">
+                      {editingId ? "Correct Invoice" : "New Sale"}
+                    </h5>
                     <button
                       type="button"
                       className="btn-close"
@@ -335,7 +405,11 @@ export default function SalesPage() {
                       Cancel
                     </button>
                     <button type="submit" className="btn btn-primary" disabled={saving}>
-                      {saving ? "Recording…" : "Complete Sale"}
+                      {saving
+                        ? "Saving…"
+                        : editingId
+                          ? "Save Corrections"
+                          : "Complete Sale"}
                     </button>
                   </div>
                 </form>
@@ -392,6 +466,47 @@ export default function SalesPage() {
                 <div className="modal-footer">
                   <button className="btn btn-secondary" onClick={() => setViewSale(null)}>
                     Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-backdrop show" />
+        </>
+      )}
+
+      {deleteTarget && (
+        <>
+          <div className="modal d-block" tabIndex={-1} role="dialog">
+            <div className="modal-dialog" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Delete Invoice</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setDeleteTarget(null)}
+                    aria-label="Close"
+                  />
+                </div>
+                <div className="modal-body">
+                  Delete invoice <strong>{deleteTarget.invoice_number}</strong>{" "}
+                  for {deleteTarget.sold_to}? The quantities it sold go back
+                  into stock, and this cannot be undone.
+                </div>
+                <div className="modal-footer">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setDeleteTarget(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting…" : "Delete"}
                   </button>
                 </div>
               </div>

@@ -16,16 +16,18 @@ class SaleViewSet(viewsets.ModelViewSet):
     may read them so their panel can show the Sales Report and its charts.
     Employees have no access.
 
-    No update endpoint: an invoice is either correct or it should be
-    deleted (which restores stock via the SaleItem pre_delete signal) and
-    re-created. This avoids the ambiguity of editing line items after the
-    fact silently mutating inventory.
+    Admin may also correct an invoice (PUT/PATCH). Rewriting the line
+    items returns the old quantities to stock and re-deducts the new ones in
+    one transaction, so inventory always matches what the invoice says; the
+    invoice number and date stay fixed so the audit trail holds. Inventory
+    Managers are barred from every write here by the permission class, not
+    just by a hidden button.
     """
 
     queryset = Sale.objects.prefetch_related("items__product").all()
     serializer_class = SaleSerializer
     permission_classes = [IsAdminOrInventoryManagerReadOnly]
-    http_method_names = ["get", "post", "delete", "head", "options"]
+    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
     filter_backends = [filters.SearchFilter]
     search_fields = ["invoice_number", "sold_to"]
 

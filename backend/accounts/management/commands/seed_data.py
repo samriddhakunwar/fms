@@ -5,8 +5,9 @@ Populates the database with 5 realistic mock records for every model:
 
   • accounts.User          — 5 users (Admin, 2 × Inventory Manager, 2 × Employee)
   • inventory.Product      — 5 products (factory goods)
-  • employees.Employee     — 5 employees
+  • employees.Employee     — 5 employees (two linked to Employee logins)
   • salary.SalaryPayment   — 5 payments (one per employee)
+  • orders.Order + Item    — 5 customer orders across the status range
   • sales.Sale + SaleItem  — 5 invoices with one line-item each
 
 Usage:
@@ -47,10 +48,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("\n🌱  Seeding FMS mock data …\n"))
 
-        self._seed_users()
+        users     = self._seed_users()
         products  = self._seed_products()
-        employees = self._seed_employees()
+        employees = self._seed_employees(users)
         self._seed_salary_payments(employees)
+        self._seed_orders(products)
         self._seed_sales(products)
 
         self.stdout.write(self.style.SUCCESS("\n✔  Seeding complete.\n"))
@@ -193,7 +195,7 @@ class Command(BaseCommand):
     # employees.Employee
     # ------------------------------------------------------------------
 
-    def _seed_employees(self):
+    def _seed_employees(self, users):
         from employees.models import Employee
 
         self.stdout.write(self.style.HTTP_INFO("\n── employees.Employee ──────────────────────"))
@@ -251,10 +253,20 @@ class Command(BaseCommand):
             ),
         ]
 
+        # The two EMPLOYEE logins get an HR record attached, so signing in as
+        # dan_emp / eva_emp shows a real profile rather than the "ask an
+        # administrator to link one" notice.
+        by_username = {user.username: user for user in users}
+        records[0]["user"] = by_username.get("dan_emp")
+        records[1]["user"] = by_username.get("eva_emp")
+
         employees = []
         for data in records:
             email = data["email"]
             employee, created = Employee.objects.get_or_create(email=email, defaults=data)
+            if not created and employee.user_id is None and data.get("user"):
+                employee.user = data["user"]
+                employee.save(update_fields=["user"])
             if created:
                 ok(f"Employee: {employee.full_name}  ({employee.designation})")
             else:
@@ -322,6 +334,55 @@ class Command(BaseCommand):
             else:
                 payment = SalaryPayment.objects.create(**data)
                 ok(f"SalaryPayment: {payment.employee.full_name} — {payment.amount} via {payment.get_payment_method_display()}")
+
+    # ------------------------------------------------------------------
+    # orders.Order + orders.OrderItem
+    # ------------------------------------------------------------------
+
+    def _seed_orders(self, products):
+        """
+        Customer orders. These deliberately do NOT move stock — an order is a
+        commitment to supply, and the deduction happens when it is fulfilled
+        and an invoice is raised (see orders.OrderViewSet.fulfil).
+        """
+        from orders.models import Order, OrderItem
+
+        self.stdout.write(self.style.HTTP_INFO("\n── orders.Order + OrderItem ────────────────"))
+
+        # Each tuple: (order_no, customer, product_index, qty, status, order_date)
+        records = [
+            ("ORD-2026-0001", "Shyam Pvt. Ltd.",               0, 20, Order.Status.PENDING,   timezone.datetime(2026, 8,  1,  9, 0, tzinfo=timezone.utc)),
+            ("ORD-2026-0002", "Himalaya Trading Concern",      1, 12, Order.Status.CONFIRMED, timezone.datetime(2026, 8,  4, 11, 0, tzinfo=timezone.utc)),
+            ("ORD-2026-0003", "Sita Hardware Suppliers",       2,  4, Order.Status.PENDING,   timezone.datetime(2026, 8,  9, 14, 0, tzinfo=timezone.utc)),
+            ("ORD-2026-0004", "Gorkha Construction Pvt. Ltd.", 4, 60, Order.Status.CONFIRMED, timezone.datetime(2026, 8, 14, 10, 0, tzinfo=timezone.utc)),
+            ("ORD-2026-0005", "Annapurna Steel Udhyog",        3, 10, Order.Status.CANCELLED, timezone.datetime(2026, 8, 20, 16, 0, tzinfo=timezone.utc)),
+        ]
+
+        for order_no, customer, prod_idx, qty, order_status, order_date in records:
+            if Order.objects.filter(order_number=order_no).exists():
+                skip(f"Order {order_no}")
+                continue
+
+            product = products[prod_idx]
+            order = Order.objects.create(
+                order_number=order_no,
+                customer_name=customer,
+                status=order_status,
+                order_date=order_date,
+                expected_delivery_date=(order_date + timezone.timedelta(days=7)).date(),
+            )
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=qty,
+                unit_price=product.selling_price,
+            )
+            order.recalculate_total()
+
+            ok(
+                f"Order {order_no}: {qty} × {product.product_name} "
+                f"({order.get_status_display()}, to {customer})"
+            )
 
     # ------------------------------------------------------------------
     # sales.Sale + sales.SaleItem

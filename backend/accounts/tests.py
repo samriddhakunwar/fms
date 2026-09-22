@@ -126,3 +126,92 @@ class UserManagementApiTests(APITestCase):
         self.client.login(username="admin_user", password=self.password)
         response = self.client.get(reverse("user-detail", args=[self.employee.id]))
         self.assertNotIn("password", response.data)
+
+
+class AdminSelfLockoutTests(APITestCase):
+    """
+    User management is Admin-only, and an Admin cannot lock themselves out of
+    it by accident. Another Admin can still do any of these to them.
+    """
+
+    def setUp(self):
+        self.password = "TestPass123!"
+        self.admin = User.objects.create_user(
+            username="admin_user", password=self.password, role=User.Role.ADMIN
+        )
+        self.other_admin = User.objects.create_user(
+            username="second_admin", password=self.password, role=User.Role.ADMIN
+        )
+        self.client.login(username="admin_user", password=self.password)
+
+    def test_admin_cannot_delete_own_account(self):
+        response = self.client.delete(reverse("user-detail", args=[self.admin.id]))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+
+    def test_admin_cannot_deactivate_own_account(self):
+        response = self.client.patch(
+            reverse("user-detail", args=[self.admin.id]), {"is_active": False}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
+
+    def test_admin_cannot_demote_own_account(self):
+        response = self.client.patch(
+            reverse("user-detail", args=[self.admin.id]), {"role": "EMPLOYEE"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.role, User.Role.ADMIN)
+
+    def test_admin_can_still_edit_own_name(self):
+        response = self.client.patch(
+            reverse("user-detail", args=[self.admin.id]), {"first_name": "Alice"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.first_name, "Alice")
+
+    def test_admin_can_demote_another_admin(self):
+        response = self.client.patch(
+            reverse("user-detail", args=[self.other_admin.id]),
+            {"role": "INVENTORY_MANAGER"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.other_admin.refresh_from_db()
+        self.assertEqual(self.other_admin.role, User.Role.INVENTORY_MANAGER)
+
+    def test_weak_password_is_rejected(self):
+        response = self.client.post(
+            reverse("user-list"),
+            {
+                "username": "weak_user",
+                "password": "password",
+                "role": "EMPLOYEE",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password", response.data)
+        self.assertFalse(User.objects.filter(username="weak_user").exists())
+
+    def test_non_admin_cannot_manage_users(self):
+        self.client.logout()
+        manager = User.objects.create_user(
+            username="manager_user",
+            password=self.password,
+            role=User.Role.INVENTORY_MANAGER,
+        )
+        self.client.login(username=manager.username, password=self.password)
+
+        self.assertEqual(
+            self.client.get(reverse("user-list")).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("user-list"),
+                {"username": "x", "password": "SecurePass123!", "role": "EMPLOYEE"},
+            ).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import api, { getErrorMessage } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const EMPTY_FORM = {
+  user: "",
   full_name: "",
   email: "",
   phone: "",
@@ -13,7 +15,15 @@ const EMPTY_FORM = {
 };
 
 export default function EmployeeList() {
+  // Inventory Managers may view staff records but not change them; the API
+  // enforces that too, so this only keeps the UI honest about it.
+  const { role } = useAuth();
+  const canManage = role === "ADMIN";
+
   const [employees, setEmployees] = useState([]);
+  // Login accounts an HR record can be attached to, so an employee can see
+  // their own profile. Admin-only data, fetched only when it is usable.
+  const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -39,9 +49,19 @@ export default function EmployeeList() {
     }
   };
 
+  const loadAccounts = async () => {
+    try {
+      const { data } = await api.get("/users/");
+      setAccounts(data.filter((account) => account.role === "EMPLOYEE"));
+    } catch {
+      // The link dropdown just stays empty; everything else still works.
+    }
+  };
+
   useEffect(() => {
     loadEmployees();
-  }, []);
+    if (canManage) loadAccounts();
+  }, [canManage]);
 
   const applyFilters = (event) => {
     event.preventDefault();
@@ -61,6 +81,7 @@ export default function EmployeeList() {
   const openEditForm = (employee) => {
     setEditingId(employee.id);
     setForm({
+      user: employee.user ?? "",
       full_name: employee.full_name,
       email: employee.email || "",
       phone: employee.phone || "",
@@ -82,11 +103,14 @@ export default function EmployeeList() {
     event.preventDefault();
     setSaving(true);
     setFormErrors({});
+    // An empty select means "no linked account", which the API expects as null
+    // rather than an empty string.
+    const payload = { ...form, user: form.user === "" ? null : form.user };
     try {
       if (editingId) {
-        await api.put(`/employees/${editingId}/`, form);
+        await api.put(`/employees/${editingId}/`, payload);
       } else {
-        await api.post("/employees/", form);
+        await api.post("/employees/", payload);
       }
       setShowForm(false);
       await loadEmployees();
@@ -116,10 +140,12 @@ export default function EmployeeList() {
   return (
     <>
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h2 className="mb-0">Employees</h2>
-        <button className="btn btn-primary" onClick={openAddForm}>
-          + Add Employee
-        </button>
+        <h2 className="mb-0">{canManage ? "Employees" : "Staff Records"}</h2>
+        {canManage && (
+          <button className="btn btn-primary" onClick={openAddForm}>
+            + Add Employee
+          </button>
+        )}
       </div>
 
       <form className="row g-2 mb-3" onSubmit={applyFilters}>
@@ -166,19 +192,22 @@ export default function EmployeeList() {
               <th>Phone</th>
               <th>Salary</th>
               <th>Status</th>
-              <th>Actions</th>
+              {canManage && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center py-4">
+                <td colSpan={canManage ? 7 : 6} className="text-center py-4">
                   Loading…
                 </td>
               </tr>
             ) : employees.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-4 text-muted">
+                <td
+                  colSpan={canManage ? 7 : 6}
+                  className="text-center py-4 text-muted"
+                >
                   No employees found.
                 </td>
               </tr>
@@ -199,20 +228,22 @@ export default function EmployeeList() {
                       {employee.status === "ACTIVE" ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="text-nowrap">
-                    <button
-                      className="btn btn-sm btn-outline-primary me-2"
-                      onClick={() => openEditForm(employee)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => setDeleteTarget(employee)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {canManage && (
+                    <td className="text-nowrap">
+                      <button
+                        className="btn btn-sm btn-outline-primary me-2"
+                        onClick={() => openEditForm(employee)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => setDeleteTarget(employee)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -336,6 +367,32 @@ export default function EmployeeList() {
                           <option value="INACTIVE">Inactive</option>
                         </select>
                       </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label">Login Account</label>
+                      <select
+                        className="form-select"
+                        value={form.user ?? ""}
+                        onChange={handleFormChange("user")}
+                      >
+                        <option value="">No linked account</option>
+                        {accounts.map((account) => (
+                          <option value={account.id} key={account.id}>
+                            {account.username}
+                            {account.first_name || account.last_name
+                              ? ` — ${account.first_name} ${account.last_name}`.trimEnd()
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="form-text">
+                        Linking an Employee account lets that person see this
+                        record on their own profile page. Optional.
+                      </div>
+                      {formErrors.user && (
+                        <div className="text-danger small">{formErrors.user[0]}</div>
+                      )}
                     </div>
                   </div>
                   <div className="modal-footer">

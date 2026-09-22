@@ -10,6 +10,20 @@ class Employee(models.Model):
     are recorded separately in the SalaryPayment model.
     """
 
+    user = models.OneToOneField(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="employee_profile",
+        verbose_name="Login Account",
+        help_text=(
+            "The login account this HR record belongs to. Linking one lets the "
+            "employee see their own profile in the app; it is optional so "
+            "records can exist for staff who have no login."
+        ),
+    )
+
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
         INACTIVE = "INACTIVE", "Inactive"
