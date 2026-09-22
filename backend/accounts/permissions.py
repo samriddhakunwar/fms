@@ -75,3 +75,29 @@ class IsAdminOrInventoryManagerOrEmployeeReadOnly(BasePermission):
             return True
 
         return user.role == User.Role.EMPLOYEE and request.method in SAFE_METHODS
+
+
+class IsAdminOrInventoryManagerReadOnly(BasePermission):
+    """
+    Admin gets full CRUD. Inventory Manager may read only.
+
+    Used by the sales endpoints so Inventory Managers can view the Sales
+    Report and its charts without being able to record or delete an
+    invoice. Employees get nothing here — sales figures are not theirs.
+    """
+
+    message = "Inventory Managers may only view sales, not change them."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not (user and user.is_authenticated):
+            return False
+
+        if user.role == User.Role.ADMIN:
+            return True
+
+        return (
+            user.role == User.Role.INVENTORY_MANAGER
+            and request.method in SAFE_METHODS
+        )

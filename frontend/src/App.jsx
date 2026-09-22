@@ -17,7 +17,6 @@ import EmployeeList from "./pages/EmployeeList";
 import SalaryList from "./pages/SalaryList";
 import SalesPage from "./pages/SalesPage";
 import ReportsPage from "./pages/ReportsPage";
-import InventoryReport from "./pages/InventoryReport";
 import UserList from "./pages/UserList";
 
 export default function App() {
@@ -44,7 +43,6 @@ export default function App() {
             <Route path="/inventory-dashboard" element={<InventoryManagerLayout />}>
               <Route index element={<InventoryDashboard />} />
               <Route path="products" element={<ProductList />} />
-              <Route path="reports" element={<InventoryReport />} />
             </Route>
           </Route>
 

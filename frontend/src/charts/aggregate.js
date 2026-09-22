@@ -64,31 +64,17 @@ export function countByField(rows, field, labels) {
 
 /** Builds a dense last-N-days series, so days with no sales still show as 0. */
 export function dailySalesSeries(sales, days = 7) {
-  const buckets = new Map();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const keys = [];
   for (let offset = days - 1; offset >= 0; offset -= 1) {
     const day = new Date(today);
     day.setDate(day.getDate() - offset);
-    buckets.set(isoDay(day), { revenue: 0, count: 0 });
+    keys.push(isoDay(day));
   }
 
-  for (const sale of sales) {
-    if (!sale.sale_date) continue;
-    const key = isoDay(new Date(sale.sale_date));
-    const bucket = buckets.get(key);
-    if (!bucket) continue; // outside the window
-    bucket.revenue += Number(sale.total_amount) || 0;
-    bucket.count += 1;
-  }
-
-  return [...buckets.entries()].map(([key, { revenue, count }]) => ({
-    day: key,
-    label: shortDay(key),
-    revenue: Number(revenue.toFixed(2)),
-    count,
-  }));
+  return bucketByDay(sales, keys);
 }
 
 /** Highest-stock products, for a magnitude comparison. */
@@ -100,6 +86,67 @@ export function topProductsByStock(products, limit = 8) {
       name: product.product_name,
       value: product.quantity_in_stock,
     }));
+}
+
+/**
+ * Same daily revenue/count buckets as dailySalesSeries, but spanning an
+ * explicit date range instead of a window ending today — so the Sales Report
+ * charts cover exactly the period its filters select and stay in step with the
+ * table beneath them.
+ *
+ * With neither bound set the report is unfiltered, so this falls through to
+ * dailySalesSeries and shows the same last-7-days view as the dashboard. A
+ * half-open range is closed off with the earliest sale on hand, or today.
+ */
+export function salesSeriesForRange(sales, startDate, endDate, days = 7) {
+  if (!startDate && !endDate) return dailySalesSeries(sales, days);
+
+  const saleDays = sales
+    .filter((sale) => sale.sale_date)
+    .map((sale) => isoDay(new Date(sale.sale_date)))
+    .sort();
+
+  const start = startDate || saleDays[0] || isoDay(new Date());
+  const end = endDate || saleDays[saleDays.length - 1] || isoDay(new Date());
+
+  // A backwards range selects nothing; an empty series renders as the
+  // "no data" state rather than a chart with no bars.
+  if (start > end) return [];
+
+  return bucketByDay(sales, daysBetween(start, end));
+}
+
+/** Every ISO day from start to end inclusive, capped so the axis stays legible. */
+function daysBetween(startIso, endIso, limit = 180) {
+  const keys = [];
+  const cursor = new Date(`${startIso}T00:00:00`);
+  const last = new Date(`${endIso}T00:00:00`);
+
+  while (cursor <= last && keys.length < limit) {
+    keys.push(isoDay(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
+}
+
+/** Totals each sale into its day bucket; days with no sales stay at zero. */
+function bucketByDay(sales, dayKeys) {
+  const buckets = new Map(dayKeys.map((key) => [key, { revenue: 0, count: 0 }]));
+
+  for (const sale of sales) {
+    if (!sale.sale_date) continue;
+    const bucket = buckets.get(isoDay(new Date(sale.sale_date)));
+    if (!bucket) continue; // outside the window
+    bucket.revenue += Number(sale.total_amount) || 0;
+    bucket.count += 1;
+  }
+
+  return [...buckets.entries()].map(([key, { revenue, count }]) => ({
+    day: key,
+    label: shortDay(key),
+    revenue: Number(revenue.toFixed(2)),
+    count,
+  }));
 }
 
 function isoDay(date) {
