@@ -70,7 +70,7 @@ export default function SalesReportTable() {
           <thead>
             <tr>
               <th>Invoice Number</th>
-              <th>Sold By</th>
+              <th>Sold To</th>
               <th>Total Amount</th>
               <th>Date</th>
             </tr>
@@ -92,7 +92,7 @@ export default function SalesReportTable() {
               sales.map((sale) => (
                 <tr key={sale.id}>
                   <td>{sale.invoice_number}</td>
-                  <td>{sale.sold_by_username}</td>
+                  <td>{sale.sold_to}</td>
                   <td>{Number(sale.total_amount).toFixed(2)}</td>
                   <td>{new Date(sale.sale_date).toLocaleDateString()}</td>
                 </tr>

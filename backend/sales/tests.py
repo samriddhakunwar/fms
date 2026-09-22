@@ -43,7 +43,7 @@ class SaleApiTests(APITestCase):
         self.client.login(username="employee_user", password=self.password)
         response = self.client.post(
             reverse("sale-list"),
-            {"items_input": [{"product": self.chair.id, "quantity": 5}]},
+            {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 5}]},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -51,6 +51,7 @@ class SaleApiTests(APITestCase):
     def test_successful_sale_deducts_stock_and_computes_total(self):
         self._login_admin()
         payload = {
+            "sold_to": "Shyam Pvt. Ltd.",
             "items_input": [
                 {"product": self.chair.id, "quantity": 5},
                 {"product": self.table.id, "quantity": 2},
@@ -72,6 +73,7 @@ class SaleApiTests(APITestCase):
     def test_insufficient_stock_rejects_entire_sale(self):
         self._login_admin()
         payload = {
+            "sold_to": "Shyam Pvt. Ltd.",
             "items_input": [
                 {"product": self.chair.id, "quantity": 5},
                 {"product": self.table.id, "quantity": 999},  # more than available
@@ -90,7 +92,7 @@ class SaleApiTests(APITestCase):
 
     def test_deleting_sale_restores_stock(self):
         self._login_admin()
-        payload = {"items_input": [{"product": self.chair.id, "quantity": 5}]}
+        payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 5}]}
         create_response = self.client.post(reverse("sale-list"), payload, format="json")
         self.chair.refresh_from_db()
         self.assertEqual(self.chair.quantity_in_stock, 45)
@@ -105,7 +107,7 @@ class SaleApiTests(APITestCase):
 
     def test_editing_sale_item_quantity_only_adjusts_delta(self):
         self._login_admin()
-        payload = {"items_input": [{"product": self.chair.id, "quantity": 5}]}
+        payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 5}]}
         create_response = self.client.post(reverse("sale-list"), payload, format="json")
         item_id = create_response.data["items"][0]["id"]
 
@@ -124,7 +126,7 @@ class SaleApiTests(APITestCase):
 
     def test_editing_sale_item_beyond_available_stock_is_rejected(self):
         self._login_admin()
-        payload = {"items_input": [{"product": self.chair.id, "quantity": 5}]}
+        payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 5}]}
         create_response = self.client.post(reverse("sale-list"), payload, format="json")
         item_id = create_response.data["items"][0]["id"]
 
@@ -138,7 +140,7 @@ class SaleApiTests(APITestCase):
 
     def test_search_by_invoice_number(self):
         self._login_admin()
-        payload = {"items_input": [{"product": self.chair.id, "quantity": 1}]}
+        payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 1}]}
         create_response = self.client.post(reverse("sale-list"), payload, format="json")
         invoice_number = create_response.data["invoice_number"]
 
@@ -150,12 +152,12 @@ class SaleApiTests(APITestCase):
         self._login_admin()
         self.client.post(
             reverse("sale-list"),
-            {"items_input": [{"product": self.chair.id, "quantity": 2}]},
+            {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 2}]},
             format="json",
         )
         self.client.post(
             reverse("sale-list"),
-            {"items_input": [{"product": self.table.id, "quantity": 1}]},
+            {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.table.id, "quantity": 1}]},
             format="json",
         )
 
@@ -169,7 +171,7 @@ class SaleApiTests(APITestCase):
 
     def test_update_endpoint_not_allowed(self):
         self._login_admin()
-        payload = {"items_input": [{"product": self.chair.id, "quantity": 1}]}
+        payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 1}]}
         create_response = self.client.post(reverse("sale-list"), payload, format="json")
         sale_id = create_response.data["id"]
 

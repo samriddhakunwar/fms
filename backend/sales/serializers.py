@@ -18,7 +18,10 @@ def generate_invoice_number():
 
 
 class SaleItemInputSerializer(serializers.Serializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    # Retired products stay on their old invoices but cannot be sold again.
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.filter(is_active=True)
+    )
     quantity = serializers.IntegerField(min_value=1)
 
 
@@ -35,15 +38,13 @@ class SaleItemSerializer(serializers.ModelSerializer):
 class SaleSerializer(serializers.ModelSerializer):
     items = SaleItemSerializer(many=True, read_only=True)
     items_input = SaleItemInputSerializer(many=True, write_only=True)
-    sold_by_username = serializers.CharField(source="sold_by.username", read_only=True)
 
     class Meta:
         model = Sale
         fields = [
             "id",
             "invoice_number",
-            "sold_by",
-            "sold_by_username",
+            "sold_to",
             "total_amount",
             "sale_date",
             "items",
@@ -52,7 +53,6 @@ class SaleSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "invoice_number",
-            "sold_by",
             "total_amount",
             "sale_date",
             "items",
@@ -63,14 +63,19 @@ class SaleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A sale must include at least one item.")
         return value
 
+    def validate_sold_to(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Customer name is required.")
+        return value
+
     def create(self, validated_data):
         items_data = validated_data.pop("items_input")
-        request = self.context["request"]
 
         with transaction.atomic():
             sale = Sale.objects.create(
                 invoice_number=generate_invoice_number(),
-                sold_by=request.user,
+                sold_to=validated_data["sold_to"],
             )
 
             total = Decimal("0")

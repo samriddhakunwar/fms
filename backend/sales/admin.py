@@ -20,6 +20,7 @@ Key design decisions
 
 from django.contrib import admin
 
+from .forms import SaleItemAdminForm
 from .models import Sale, SaleItem
 
 
@@ -36,6 +37,7 @@ class SaleItemInline(admin.TabularInline):
     """
 
     model = SaleItem
+    form = SaleItemAdminForm  # Offers active products only — see sales/forms.py
     extra = 1  # Always show one blank row for adding a new item
 
     # Columns rendered inside the inline table
@@ -76,7 +78,7 @@ class SaleAdmin(admin.ModelAdmin):
 
     list_display = (
         "invoice_number",
-        "sold_by",       # Renders via User.__str__
+        "sold_to",       # Customer the invoice was issued to
         "total_amount",
         "sale_date",
     )
@@ -86,10 +88,8 @@ class SaleAdmin(admin.ModelAdmin):
     list_filter = ("sale_date",)   # Date-based sidebar filter
 
     search_fields = (
-        "invoice_number",          # Direct match on invoice number
-        "sold_by__username",       # Traverse the FK to find by username
-        "sold_by__first_name",
-        "sold_by__last_name",
+        "invoice_number",   # Direct match on invoice number
+        "sold_to",          # Customer / company name
     )
 
     # Most recent sales first
@@ -114,7 +114,7 @@ class SaleAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "invoice_number",
-                    "sold_by",
+                    "sold_to",
                     "sale_date",
                 ),
             },
@@ -178,6 +178,8 @@ class SaleItemAdmin(admin.ModelAdmin):
     # ------------------------------------------------------------------
     # Detail (add / change) view
     # ------------------------------------------------------------------
+
+    form = SaleItemAdminForm  # Offers active products only — see sales/forms.py
 
     # subtotal is auto-computed; sale is the parent — both readonly here
     # to reinforce that these should be managed via the Sale inline.

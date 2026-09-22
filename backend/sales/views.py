@@ -26,7 +26,7 @@ class SaleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdmin]
     http_method_names = ["get", "post", "delete", "head", "options"]
     filter_backends = [filters.SearchFilter]
-    search_fields = ["invoice_number"]
+    search_fields = ["invoice_number", "sold_to"]
 
     def get_queryset(self):
         queryset = super().get_queryset()

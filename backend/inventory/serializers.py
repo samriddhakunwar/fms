@@ -17,6 +17,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "selling_price",
             "quantity_in_stock",
             "minimum_stock_level",
+            "is_active",
             "is_low_stock",
             "stock_status",
             "created_at",

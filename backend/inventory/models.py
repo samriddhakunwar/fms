@@ -38,6 +38,15 @@ class Product(models.Model):
             "the product is considered low stock."
         ),
     )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active",
+        help_text=(
+            "Uncheck to retire this product instead of deleting it. Inactive "
+            "products stay in the catalogue so past invoices remain intact, "
+            "but cannot be added to new sales."
+        ),
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Created At",

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models, transaction
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
@@ -14,12 +13,10 @@ class Sale(models.Model):
         verbose_name="Invoice Number",
         help_text="Unique identifier for this sale/invoice.",
     )
-    sold_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="sales",
-        verbose_name="Sold By",
-        help_text="The system user who recorded this sale.",
+    sold_to = models.CharField(
+        max_length=255,
+        verbose_name="Sold To",
+        help_text="The customer or company this invoice was issued to.",
     )
     total_amount = models.DecimalField(
         max_digits=14,
@@ -40,7 +37,10 @@ class Sale(models.Model):
         ordering = ["-sale_date"]
 
     def __str__(self):
-        return f"Invoice #{self.invoice_number} — {self.total_amount} on {self.sale_date.strftime('%Y-%m-%d')}"
+        return (
+            f"Invoice #{self.invoice_number} — {self.sold_to} — "
+            f"{self.total_amount} on {self.sale_date.strftime('%Y-%m-%d')}"
+        )
 
 
 class SaleItem(models.Model):

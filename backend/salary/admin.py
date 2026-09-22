@@ -11,6 +11,7 @@ large workforce.
 
 from django.contrib import admin
 
+from .forms import SalaryPaymentAdminForm
 from .models import SalaryPayment
 
 
@@ -58,6 +59,8 @@ class SalaryPaymentAdmin(admin.ModelAdmin):
     # ------------------------------------------------------------------
     # Detail (add / change) view
     # ------------------------------------------------------------------
+
+    form = SalaryPaymentAdminForm  # Offers active employees only — see salary/forms.py
 
     # payment_date is editable (admin can correct a date if needed), but
     # we keep it visible so the default value is obvious.

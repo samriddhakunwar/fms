@@ -15,6 +15,7 @@ export default function SalesPage() {
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
+  const [soldTo, setSoldTo] = useState("");
   const [lines, setLines] = useState([emptyLine()]);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -58,6 +59,7 @@ export default function SalesPage() {
   };
 
   const openForm = () => {
+    setSoldTo("");
     setLines([emptyLine()]);
     setFormError("");
     setShowForm(true);
@@ -87,6 +89,11 @@ export default function SalesPage() {
     event.preventDefault();
     setFormError("");
 
+    if (!soldTo.trim()) {
+      setFormError("Enter the customer this sale is for.");
+      return;
+    }
+
     const validLines = lines.filter((line) => line.product && Number(line.quantity) > 0);
     if (validLines.length === 0) {
       setFormError("Add at least one product line.");
@@ -96,6 +103,7 @@ export default function SalesPage() {
     setSaving(true);
     try {
       await api.post("/sales/", {
+        sold_to: soldTo.trim(),
         items_input: validLines.map((line) => ({
           product: Number(line.product),
           quantity: Number(line.quantity),
@@ -163,7 +171,7 @@ export default function SalesPage() {
           <thead>
             <tr>
               <th>Invoice Number</th>
-              <th>Sold By</th>
+              <th>Sold To</th>
               <th>Total Amount</th>
               <th>Date</th>
               <th>Actions</th>
@@ -186,7 +194,7 @@ export default function SalesPage() {
               sales.map((sale) => (
                 <tr key={sale.id}>
                   <td>{sale.invoice_number}</td>
-                  <td>{sale.sold_by_username}</td>
+                  <td>{sale.sold_to}</td>
                   <td>{Number(sale.total_amount).toFixed(2)}</td>
                   <td>{new Date(sale.sale_date).toLocaleString()}</td>
                   <td>
@@ -223,6 +231,21 @@ export default function SalesPage() {
                     {formError && (
                       <div className="alert alert-danger py-2">{formError}</div>
                     )}
+
+                    <div className="mb-3" style={{ maxWidth: "360px" }}>
+                      <label className="form-label" htmlFor="sold-to">
+                        Sold To
+                      </label>
+                      <input
+                        id="sold-to"
+                        type="text"
+                        className="form-control"
+                        placeholder="e.g. Shyam Pvt. Ltd."
+                        value={soldTo}
+                        onChange={(e) => setSoldTo(e.target.value)}
+                        required
+                      />
+                    </div>
 
                     <table className="table">
                       <thead>
@@ -339,7 +362,7 @@ export default function SalesPage() {
                 </div>
                 <div className="modal-body">
                   <p className="text-muted mb-2">
-                    Sold by {viewSale.sold_by_username} on{" "}
+                    Sold to {viewSale.sold_to} on{" "}
                     {new Date(viewSale.sale_date).toLocaleString()}
                   </p>
                   <table className="table table-sm">

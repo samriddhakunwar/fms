@@ -47,11 +47,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("\n🌱  Seeding FMS mock data …\n"))
 
-        users     = self._seed_users()
+        self._seed_users()
         products  = self._seed_products()
         employees = self._seed_employees()
         self._seed_salary_payments(employees)
-        self._seed_sales(users, products)
+        self._seed_sales(products)
 
         self.stdout.write(self.style.SUCCESS("\n✔  Seeding complete.\n"))
 
@@ -327,26 +327,25 @@ class Command(BaseCommand):
     # sales.Sale + sales.SaleItem
     # ------------------------------------------------------------------
 
-    def _seed_sales(self, users, products):
+    def _seed_sales(self, products):
         from sales.models import Sale, SaleItem
 
         self.stdout.write(self.style.HTTP_INFO("\n── sales.Sale + SaleItem ───────────────────"))
 
-        # Each tuple: (invoice_no, sold_by_index, product_index, qty, unit_price, sale_date)
+        # Each tuple: (invoice_no, sold_to, product_index, qty, unit_price, sale_date)
         records = [
-            ("INV-2026-0001", 0, 0,  10, Decimal("1250.00"), timezone.datetime(2026, 7, 10, 9,  0, tzinfo=timezone.utc)),
-            ("INV-2026-0002", 1, 1,   5, Decimal("875.50"),  timezone.datetime(2026, 7, 15, 11, 0, tzinfo=timezone.utc)),
-            ("INV-2026-0003", 1, 2,   3, Decimal("3400.00"), timezone.datetime(2026, 7, 20, 14, 0, tzinfo=timezone.utc)),
-            ("INV-2026-0004", 2, 4,  50, Decimal("540.00"),  timezone.datetime(2026, 7, 25, 10, 0, tzinfo=timezone.utc)),
-            ("INV-2026-0005", 0, 0,   8, Decimal("1300.00"), timezone.datetime(2026, 7, 30, 16, 0, tzinfo=timezone.utc)),
+            ("INV-2026-0001", "Shyam Pvt. Ltd.",              0,  10, Decimal("1250.00"), timezone.datetime(2026, 7, 10, 9,  0, tzinfo=timezone.utc)),
+            ("INV-2026-0002", "Himalaya Trading Concern",     1,   5, Decimal("875.50"),  timezone.datetime(2026, 7, 15, 11, 0, tzinfo=timezone.utc)),
+            ("INV-2026-0003", "Sita Hardware Suppliers",      2,   3, Decimal("3400.00"), timezone.datetime(2026, 7, 20, 14, 0, tzinfo=timezone.utc)),
+            ("INV-2026-0004", "Gorkha Construction Pvt. Ltd.", 4,  50, Decimal("540.00"),  timezone.datetime(2026, 7, 25, 10, 0, tzinfo=timezone.utc)),
+            ("INV-2026-0005", "Annapurna Steel Udhyog",       0,   8, Decimal("1300.00"), timezone.datetime(2026, 7, 30, 16, 0, tzinfo=timezone.utc)),
         ]
 
-        for inv_no, user_idx, prod_idx, qty, unit_price, sale_date in records:
+        for inv_no, sold_to, prod_idx, qty, unit_price, sale_date in records:
             if Sale.objects.filter(invoice_number=inv_no).exists():
                 skip(f"Sale {inv_no}")
                 continue
 
-            sold_by = users[user_idx]
             product = products[prod_idx]
 
             # Create the Sale header first (total_amount starts at 0; app code
@@ -354,7 +353,7 @@ class Command(BaseCommand):
             subtotal = qty * unit_price
             sale = Sale.objects.create(
                 invoice_number=inv_no,
-                sold_by=sold_by,
+                sold_to=sold_to,
                 total_amount=subtotal,   # Single line item; equals the subtotal
                 sale_date=sale_date,
             )
@@ -373,5 +372,5 @@ class Command(BaseCommand):
 
             ok(
                 f"Sale {inv_no}: {qty} × {product.product_name} "
-                f"@ {unit_price} = {subtotal}  (by {sold_by.username})"
+                f"@ {unit_price} = {subtotal}  (to {sold_to})"
             )

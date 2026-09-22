@@ -9,9 +9,14 @@ Highlights:
     glance without opening each record.
   • LowStockFilter — a simple list filter that lets admins quickly narrow the
     list to only products that are below (or above) their minimum stock level.
+  • Deletion is disabled. SaleItem.product is PROTECTed to preserve the sales
+    audit trail, so a product that has ever been sold can never be deleted.
+    Retire it with the "Deactivate" action instead — it stays in the
+    catalogue and on old invoices, but is no longer offered for new sales.
 """
 
 from django.contrib import admin
+from django.contrib.admin.options import IS_POPUP_VAR
 
 from .models import Product
 
@@ -76,6 +81,7 @@ class ProductAdmin(admin.ModelAdmin):
         "quantity_in_stock",
         "minimum_stock_level",
         "stock_status",     # ← custom computed column (see method below)
+        "is_active",
         "created_at",
     )
 
@@ -83,11 +89,14 @@ class ProductAdmin(admin.ModelAdmin):
     list_display_links = ("product_name", "sku")
 
     list_filter = (
+        "is_active",        # Retired vs. sellable products
         LowStockFilter,     # Custom sidebar filter defined above
         "created_at",       # Django's built-in date hierarchy filter
     )
 
     search_fields = ("product_name", "sku", "description")
+
+    actions = ("deactivate_products", "reactivate_products")
 
     # Default sort: ascending by product name (overrides model Meta ordering
     # in the admin if you'd prefer a different default here)
@@ -111,6 +120,7 @@ class ProductAdmin(admin.ModelAdmin):
                     "product_name",
                     "sku",
                     "description",
+                    "is_active",
                 ),
             },
         ),
@@ -141,6 +151,53 @@ class ProductAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    # ------------------------------------------------------------------
+    # Deletion policy
+    # ------------------------------------------------------------------
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Products are never deleted — retire them with the Deactivate action.
+
+        Returning False also removes the bulk "Delete selected" action, so
+        nobody can walk into the ProtectedError that SaleItem.product raises.
+        """
+        return False
+
+    # ------------------------------------------------------------------
+    # Actions
+    # ------------------------------------------------------------------
+
+    @admin.action(description="Deactivate selected products (soft delete)")
+    def deactivate_products(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            f"{updated} product(s) deactivated. They remain on past invoices "
+            f"but can no longer be added to new sales.",
+        )
+
+    @admin.action(description="Reactivate selected products")
+    def reactivate_products(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"{updated} product(s) reactivated.")
+
+    # ------------------------------------------------------------------
+    # Querysets
+    # ------------------------------------------------------------------
+
+    def get_queryset(self, request):
+        """
+        The full catalogue (active and retired) is shown on the changelist,
+        but the raw-id chooser popup used when adding a sale line item
+        defaults to active products only. An explicit ?is_active__exact=
+        in the popup URL still wins, so retired items remain reachable.
+        """
+        queryset = super().get_queryset(request)
+        if IS_POPUP_VAR in request.GET and "is_active__exact" not in request.GET:
+            queryset = queryset.filter(is_active=True)
+        return queryset
 
     # ------------------------------------------------------------------
     # Custom admin methods
