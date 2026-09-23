@@ -350,11 +350,15 @@ export default function EmployeeList() {
                           type="number"
                           step="0.01"
                           min="0"
+                          max="9999999999.99"
                           className="form-control"
                           value={form.salary}
                           onChange={handleFormChange("salary")}
                           required
                         />
+                        {formErrors.salary && (
+                          <div className="text-danger small">{formErrors.salary[0]}</div>
+                        )}
                       </div>
                       <div className="col-6 mb-3">
                         <label className="form-label">Status</label>
