@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 choices=[
                     ("ADMIN", "Admin"),
-                    ("INVENTORY_MANAGER", "Inventory Manager"),
+                    ("INVENTORY_MANAGER", "Manager"),
                     ("STAFF", "Staff"),
                 ],
                 default="ADMIN",

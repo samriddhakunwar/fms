@@ -6,7 +6,7 @@ class User(AbstractUser):
 
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Admin"
-        INVENTORY_MANAGER = "INVENTORY_MANAGER", "Inventory Manager"
+        INVENTORY_MANAGER = "INVENTORY_MANAGER", "Manager"
         STAFF = "STAFF", "Staff"
 
     # Redeclared from PermissionsMixin purely to give the auto-created

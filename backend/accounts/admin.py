@@ -41,7 +41,7 @@ class UserAdmin(BaseUserAdmin):
 
     # Sidebar filters in the changelist
     list_filter = (
-        "role",        # Filter by Admin / Inventory Manager / Employee
+        "role",        # Filter by Admin / manager / Employee
         "is_active",   # Filter by active / inactive accounts
         "is_staff",
     )

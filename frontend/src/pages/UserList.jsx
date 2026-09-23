@@ -14,7 +14,7 @@ const EMPTY_FORM = {
 
 const ROLE_LABELS = {
   ADMIN: "Admin",
-  INVENTORY_MANAGER: "Inventory Manager",
+  INVENTORY_MANAGER: "Manager",
   STAFF: "Staff",
 };
 
@@ -289,7 +289,7 @@ export default function UserList() {
                           onChange={handleFormChange("role")}
                         >
                           <option value="ADMIN">Admin</option>
-                          <option value="INVENTORY_MANAGER">Inventory Manager</option>
+                          <option value="INVENTORY_MANAGER">Manager</option>
                           <option value="STAFF">Staff</option>
                         </select>
                       </div>

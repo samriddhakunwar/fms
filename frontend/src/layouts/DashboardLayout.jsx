@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = {
   ADMIN: "Admin",
-  INVENTORY_MANAGER: "Inventory Manager",
+  INVENTORY_MANAGER: "Manager",
   STAFF: "Staff",
 };
 

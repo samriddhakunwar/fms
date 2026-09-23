@@ -3,7 +3,7 @@ management/commands/seed_data.py
 =================================
 Populates the database with 5 realistic mock records for every model:
 
-  • accounts.User          — 5 users (Admin, 2 × Inventory Manager, 2 × Employee)
+  • accounts.User          — 5 users (Admin, 2 × manager, 2 × Employee)
   • inventory.Product      — 5 products (factory goods)
   • employees.Employee     — 5 employees (two linked to Employee logins)
   • salary.SalaryPayment   — 5 payments (one per employee)

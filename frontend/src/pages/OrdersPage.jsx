@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import api, { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import api, { getErrorMessage } from "../services/api";
 
 /**
  * Customer orders — what was asked for, before anything leaves the factory.
@@ -8,7 +8,7 @@ import { useAuth } from "../context/AuthContext";
  * An order is not a sale: it moves no stock. Fulfilling one (Admin only)
  * raises the invoice and deducts the stock in a single server-side step.
  *
- * Admin gets full CRUD plus fulfilment. Inventory Manager may raise, view and
+ * Admin gets full CRUD plus fulfilment. manager may raise, view and
  * delete orders but not amend them — the API refuses a manager's PUT/PATCH, so
  * hiding the Edit button here only saves them a pointless round trip.
  */

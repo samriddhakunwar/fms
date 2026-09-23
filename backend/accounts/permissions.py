@@ -24,7 +24,7 @@ class IsAdmin(BasePermission):
 
 
 class IsInventoryManager(BasePermission):
-    message = "Only Inventory Manager users may perform this action."
+    message = "Only manager users may perform this action."
 
     def has_permission(self, request, view):
         return bool(
@@ -46,7 +46,7 @@ class IsStaff(BasePermission):
 
 
 class IsAdminOrInventoryManager(BasePermission):
-    message = "Only Admin or Inventory Manager users may perform this action."
+    message = "Only Admin or manager users may perform this action."
 
     def has_permission(self, request, view):
         return bool(
@@ -58,7 +58,7 @@ class IsAdminOrInventoryManager(BasePermission):
 
 class IsAdminOrInventoryManagerOrStaffReadOnly(BasePermission):
     """
-    Admin and Inventory Manager get full CRUD. Staff may read only —
+    Admin and manager get full CRUD. Staff may read only —
     they need to see what is in stock, but must not add, update or delete
     items. Anonymous users get nothing.
     """
@@ -79,14 +79,14 @@ class IsAdminOrInventoryManagerOrStaffReadOnly(BasePermission):
 
 class IsAdminOrInventoryManagerReadOnly(BasePermission):
     """
-    Admin gets full CRUD. Inventory Manager may read only.
+    Admin gets full CRUD. manager may read only.
 
-    Used by the sales endpoints so Inventory Managers can view the Sales
+    Used by the sales endpoints so managers can view the Sales
     Report and its charts without being able to record or delete an
     invoice. Employees get nothing here — sales figures are not theirs.
     """
 
-    message = "Inventory Managers may only view sales, not change them."
+    message = "Managers may only view sales, not change them."
 
     def has_permission(self, request, view):
         user = request.user
@@ -105,7 +105,7 @@ class IsAdminOrInventoryManagerReadOnly(BasePermission):
 
 class IsAdminOrInventoryManagerNoUpdate(BasePermission):
     """
-    Admin gets full CRUD. Inventory Manager may create, read and delete but
+    Admin gets full CRUD. manager may create, read and delete but
     never update.
 
     Used by the orders endpoints: the role matrix lets a manager raise and
@@ -113,7 +113,7 @@ class IsAdminOrInventoryManagerNoUpdate(BasePermission):
     here rather than merely hidden in the React UI. Employees get nothing.
     """
 
-    message = "Inventory Managers may not update orders."
+    message = "Managers may not update orders."
 
     def has_permission(self, request, view):
         user = request.user

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import api, { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import api, { getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
   user: "",
@@ -12,17 +12,30 @@ const EMPTY_FORM = {
   joining_date: "",
   salary: "",
   status: "ACTIVE",
+  login_username: "",
+  login_password: "",
+  login_role: "STAFF",
+};
+
+// Value of the "Login Account" select that means "create a new login now".
+const NEW_LOGIN = "__new__";
+
+const ROLE_LABELS = {
+  ADMIN: "Admin",
+  INVENTORY_MANAGER: "Manager",
+  STAFF: "Staff",
 };
 
 export default function EmployeeList() {
-  // Inventory Managers may view staff records but not change them; the API
+  // Managers may view staff records but not change them; the API
   // enforces that too, so this only keeps the UI honest about it.
   const { role } = useAuth();
   const canManage = role === "ADMIN";
 
   const [employees, setEmployees] = useState([]);
   // Login accounts an HR record can be attached to, so an employee can see
-  // their own profile. Admin-only data, fetched only when it is usable.
+  // their own profile. Any role can be linked: salaried Admins and managers
+  // have HR records too. Admin-only data, fetched only when it is usable.
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -52,7 +65,7 @@ export default function EmployeeList() {
   const loadAccounts = async () => {
     try {
       const { data } = await api.get("/users/");
-      setAccounts(data.filter((account) => account.role === "STAFF"));
+      setAccounts(data);
     } catch {
       // The link dropdown just stays empty; everything else still works.
     }
@@ -81,6 +94,7 @@ export default function EmployeeList() {
   const openEditForm = (employee) => {
     setEditingId(employee.id);
     setForm({
+      ...EMPTY_FORM,
       user: employee.user ?? "",
       full_name: employee.full_name,
       email: employee.email || "",
@@ -104,8 +118,13 @@ export default function EmployeeList() {
     setSaving(true);
     setFormErrors({});
     // An empty select means "no linked account", which the API expects as null
-    // rather than an empty string.
-    const payload = { ...form, user: form.user === "" ? null : form.user };
+    // rather than an empty string. The login_* fields only go out when a new
+    // login is being created alongside the record.
+    const { login_username, login_password, login_role, ...record } = form;
+    const payload =
+      form.user === NEW_LOGIN
+        ? { ...record, user: null, login_username, login_password, login_role }
+        : { ...record, user: form.user === "" ? null : form.user };
     try {
       if (editingId) {
         await api.put(`/employees/${editingId}/`, payload);
@@ -114,6 +133,7 @@ export default function EmployeeList() {
       }
       setShowForm(false);
       await loadEmployees();
+      if (form.user === NEW_LOGIN) loadAccounts();
     } catch (err) {
       if (err.response?.status === 400 && err.response.data) {
         setFormErrors(err.response.data);
@@ -381,23 +401,86 @@ export default function EmployeeList() {
                         onChange={handleFormChange("user")}
                       >
                         <option value="">No linked account</option>
-                        {accounts.map((account) => (
-                          <option value={account.id} key={account.id}>
-                            {account.username}
-                            {account.first_name || account.last_name
-                              ? ` — ${account.first_name} ${account.last_name}`.trimEnd()
-                              : ""}
-                          </option>
-                        ))}
+                        <option value={NEW_LOGIN}>+ Create new login…</option>
+                        {accounts
+                          // Hide logins already linked to a different record.
+                          .filter(
+                            (account) =>
+                              !employees.some(
+                                (other) => other.user === account.id && other.id !== editingId
+                              )
+                          )
+                          .map((account) => (
+                            <option value={account.id} key={account.id}>
+                              {account.username}
+                              {account.first_name || account.last_name
+                                ? ` — ${account.first_name} ${account.last_name}`.trimEnd()
+                                : ""}
+                              {` (${ROLE_LABELS[account.role] || account.role})`}
+                            </option>
+                          ))}
                       </select>
                       <div className="form-text">
-                        Linking an Employee account lets that person see this
-                        record on their own profile page. Optional.
+                        Linking a login lets that person see this record on
+                        their own profile page. Optional.
                       </div>
                       {formErrors.user && (
                         <div className="text-danger small">{formErrors.user[0]}</div>
                       )}
                     </div>
+
+                    {form.user === NEW_LOGIN && (
+                      <div className="border rounded p-3 mb-3">
+                        <div className="row">
+                          <div className="col-6 mb-3">
+                            <label className="form-label">Username</label>
+                            <input
+                              className="form-control"
+                              value={form.login_username}
+                              onChange={handleFormChange("login_username")}
+                              autoComplete="off"
+                              required
+                            />
+                            {formErrors.login_username && (
+                              <div className="text-danger small">
+                                {formErrors.login_username[0]}
+                              </div>
+                            )}
+                          </div>
+                          <div className="col-6 mb-3">
+                            <label className="form-label">Role</label>
+                            <select
+                              className="form-select"
+                              value={form.login_role}
+                              onChange={handleFormChange("login_role")}
+                            >
+                              {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                                <option value={value} key={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <label className="form-label">Password</label>
+                        <input
+                          type="password"
+                          className="form-control"
+                          value={form.login_password}
+                          onChange={handleFormChange("login_password")}
+                          autoComplete="new-password"
+                          required
+                        />
+                        {formErrors.login_password && (
+                          <div className="text-danger small">
+                            {formErrors.login_password[0]}
+                          </div>
+                        )}
+                        <div className="form-text">
+                          Name, email and phone are copied from this record.
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="modal-footer">
                     <button

@@ -12,7 +12,7 @@ from .serializers import SaleSerializer
 
 class SaleViewSet(viewsets.ModelViewSet):
     """
-    Sales (invoices). Admin records and deletes them; Inventory Managers
+    Sales (invoices). Admin records and deletes them; managers
     may read them so their panel can show the Sales Report and its charts.
     Employees have no access.
 

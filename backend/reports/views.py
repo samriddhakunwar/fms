@@ -49,7 +49,7 @@ def sales_report(request):
     """
     Sales report for a date range.
 
-    Admin and Inventory Manager both generate this; employees are refused by
+    Admin and manager both generate this; employees are refused by
     the permission class. Query parameters ``start_date`` and ``end_date``
     (YYYY-MM-DD) are both optional — with neither, the report covers the last
     seven days, matching the dashboard.

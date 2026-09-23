@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import api, { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import api, { getErrorMessage } from "../services/api";
 
 function emptyLine() {
   return { product: "", quantity: 1 };
 }
 
 export default function SalesPage() {
-  // Inventory Managers reach this page read-only: they may see invoices but
+  // managers reach this page read-only: they may see invoices but
   // never record, correct or delete one. The API refuses every write from them
   // too — this only stops the UI offering what would be rejected.
   const { role } = useAuth();

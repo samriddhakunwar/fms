@@ -147,6 +147,81 @@ class EmployeeApiTests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["full_name"], "Bob Wilson")
 
+    def test_admin_can_create_employee_with_new_login(self):
+        self.client.login(username="admin_user", password=self.password)
+        payload = {
+            "full_name": "John Smith",
+            "email": "john@example.com",
+            "phone": "555-0101",
+            "designation": "Quality Inspector",
+            "joining_date": "2023-06-01",
+            "salary": "32000.00",
+            "login_username": "john",
+            "login_password": "SecurePass123!",
+        }
+        response = self.client.post(reverse("employee-list"), payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["username"], "john")
+        self.assertNotIn("login_password", response.data)
+
+        user = User.objects.get(username="john")
+        self.assertEqual(user.role, User.Role.STAFF)
+        self.assertEqual((user.first_name, user.last_name), ("John", "Smith"))
+        self.assertEqual(user.email, "john@example.com")
+        self.assertTrue(user.check_password("SecurePass123!"))
+        self.assertEqual(Employee.objects.get(full_name="John Smith").user, user)
+
+    def test_new_login_can_have_another_role(self):
+        self.client.login(username="admin_user", password=self.password)
+        response = self.client.patch(
+            reverse("employee-detail", args=[self.employee.id]),
+            {
+                "login_username": "jane_mgr",
+                "login_password": "SecurePass123!",
+                "login_role": "INVENTORY_MANAGER",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.employee.refresh_from_db()
+        self.assertEqual(self.employee.user.username, "jane_mgr")
+        self.assertEqual(self.employee.user.role, User.Role.INVENTORY_MANAGER)
+
+    def test_new_login_rejects_taken_username_and_saves_nothing(self):
+        self.client.login(username="admin_user", password=self.password)
+        payload = {
+            "full_name": "John Smith",
+            "designation": "Quality Inspector",
+            "joining_date": "2023-06-01",
+            "salary": "32000.00",
+            "login_username": "Employee_User",
+            "login_password": "SecurePass123!",
+        }
+        response = self.client.post(reverse("employee-list"), payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("login_username", response.data)
+        self.assertEqual(Employee.objects.count(), 1)
+
+    def test_new_login_requires_a_valid_password(self):
+        self.client.login(username="admin_user", password=self.password)
+        response = self.client.patch(
+            reverse("employee-detail", args=[self.employee.id]),
+            {"login_username": "jane", "login_password": "123"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("login_password", response.data)
+        self.assertFalse(User.objects.filter(username="jane").exists())
+
+    def test_cannot_create_login_for_already_linked_employee(self):
+        self.employee.user = self.employee_user
+        self.employee.save()
+        self.client.login(username="admin_user", password=self.password)
+        response = self.client.patch(
+            reverse("employee-detail", args=[self.employee.id]),
+            {"login_username": "jane", "login_password": "SecurePass123!"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("login_username", response.data)
+
 
 class EmployeeSelfProfileTests(APITestCase):
     """

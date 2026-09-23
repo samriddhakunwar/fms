@@ -28,7 +28,7 @@ export default function InventoryDashboard() {
     })();
   }, []);
 
-  // Inventory Managers only have API access to products, so both charts here
+  // managers only have API access to products, so both charts here
   // are drawn from that one list.
   useEffect(() => {
     (async () => {
@@ -58,7 +58,7 @@ export default function InventoryDashboard() {
 
   return (
     <>
-      <h2 className="mb-4">Inventory Manager Dashboard</h2>
+      <h2 className="mb-4">manager Dashboard</h2>
 
       <div className="row g-3 mb-4">
         {cards.map((card) => (
