@@ -5,7 +5,6 @@ const NAV_ITEMS = [
   { label: "Dashboard", path: "/admin-dashboard" },
   { label: "Inventory", path: "/admin-dashboard/inventory" },
   { label: "Employees", path: "/admin-dashboard/employees" },
-  { label: "Salary", path: "/admin-dashboard/salary" },
   { label: "Orders", path: "/admin-dashboard/orders" },
   { label: "Sales", path: "/admin-dashboard/sales" },
   { label: "Reports", path: "/admin-dashboard/reports" },
