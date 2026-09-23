@@ -1,6 +1,6 @@
 """
 Converge FK constraint/index names with the table renames in 0004 and the
-matching migrations in employees/inventory/salary/sales.
+matching migrations in employees/inventory/sales.
 
 MySQL's RENAME TABLE leaves constraints on *other* tables untouched, so a
 database migrated in place keeps names like
@@ -22,13 +22,6 @@ RENAMES = [
         "django_admin_log_user_id_c564eba6_fk_accounts_user_id",
         "django_admin_log_user_id_c564eba6_fk_user_id",
         "user",
-    ),
-    (
-        "salary_payment",
-        "employee_id",
-        "salary_salarypayment_employee_id_b6da0e89_fk_employees",
-        "salary_salarypayment_employee_id_b6da0e89_fk_employee_id",
-        "employee",
     ),
     (
         "sale",
@@ -95,7 +88,6 @@ class Migration(migrations.Migration):
         ("admin", "0003_logentry_add_action_flag_choices"),
         ("employees", "0002_alter_employee_table"),
         ("inventory", "0002_alter_product_table"),
-        ("salary", "0002_alter_salarypayment_table"),
         ("sales", "0002_alter_sale_table_alter_saleitem_table"),
     ]
 

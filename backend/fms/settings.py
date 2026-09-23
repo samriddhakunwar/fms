@@ -63,7 +63,6 @@ PROJECT_APPS = [
     'accounts.apps.AccountsConfig',    # Custom user model & authentication
     'inventory.apps.InventoryConfig',  # Finished-goods inventory
     'employees.apps.EmployeesConfig',  # Employee records
-    'salary.apps.SalaryConfig',        # Salary payment records
     'orders.apps.OrdersConfig',        # Customer orders (pre-invoice)
     'sales.apps.SalesConfig',          # Sales transactions (invoices)
     'reports.apps.ReportsConfig',      # Reporting (no DB models)

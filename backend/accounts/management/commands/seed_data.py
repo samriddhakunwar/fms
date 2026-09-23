@@ -6,7 +6,6 @@ Populates the database with 5 realistic mock records for every model:
   • accounts.User          — 5 users (Admin, 2 × manager, 2 × Employee)
   • inventory.Product      — 5 products (factory goods)
   • employees.Employee     — 5 employees (two linked to Employee logins)
-  • salary.SalaryPayment   — 5 payments (one per employee)
   • orders.Order + Item    — 5 customer orders across the status range
   • sales.Sale + SaleItem  — 5 invoices with one line-item each
 
@@ -42,7 +41,7 @@ def skip(label: str) -> None:
 # ---------------------------------------------------------------------------
 
 class Command(BaseCommand):
-    help = "Seed 5 mock records for every FMS model (accounts, inventory, employees, salary, sales)."
+    help = "Seed 5 mock records for every FMS model (accounts, inventory, employees, orders, sales)."
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -50,8 +49,7 @@ class Command(BaseCommand):
 
         users     = self._seed_users()
         products  = self._seed_products()
-        employees = self._seed_employees(users)
-        self._seed_salary_payments(employees)
+        self._seed_employees(users)
         self._seed_orders(products)
         self._seed_sales(products)
 
@@ -274,53 +272,6 @@ class Command(BaseCommand):
             employees.append(employee)
 
         return employees
-
-    # ------------------------------------------------------------------
-    # salary.SalaryPayment
-    # ------------------------------------------------------------------
-
-    def _seed_salary_payments(self, employees):
-        from salary.models import SalaryPayment
-
-        self.stdout.write(self.style.HTTP_INFO("\n── salary.SalaryPayment ────────────────────"))
-
-        records = [
-            dict(
-                employee=employees[0],
-                amount=Decimal("28000.00"),
-                remarks="Regular July 2026 salary.",
-            ),
-            dict(
-                employee=employees[1],
-                amount=Decimal("32000.00"),
-                remarks="Regular July 2026 salary.",
-            ),
-            dict(
-                employee=employees[2],
-                amount=Decimal("38000.00"),
-                remarks="Regular July 2026 salary.",
-            ),
-            dict(
-                employee=employees[3],
-                amount=Decimal("26000.00"),    # 25 000 base + 1 000 attendance bonus
-                remarks="July salary + BDT 1,000 attendance bonus.",
-            ),
-            dict(
-                employee=employees[4],
-                amount=Decimal("22500.00"),    # Pro-rated — inactive mid-month
-                remarks="Final settlement — pro-rated for inactive status.",
-            ),
-        ]
-
-        for data in records:
-            # Uniqueness guard: skip if this exact payment was already seeded
-            exists = SalaryPayment.objects.filter(**data).exists()
-
-            if exists:
-                skip(f"SalaryPayment for {data['employee'].full_name}")
-            else:
-                payment = SalaryPayment.objects.create(**data)
-                ok(f"SalaryPayment: {payment.employee.full_name} — {payment.amount}")
 
     # ------------------------------------------------------------------
     # orders.Order + orders.OrderItem

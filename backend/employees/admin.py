@@ -6,11 +6,8 @@ Admin configuration for the Employee model.
 The list view is enriched with filters and a search box to help HR staff
 quickly locate a particular employee.
 
-Deletion is disabled. SalaryPayment.employee is PROTECTed to preserve the
-payroll audit trail, so an employee who has ever been paid can never be
-deleted. Retire them with the "Deactivate" action instead (status →
-Inactive) — their payment history survives, but they are no longer offered
-when recording a new salary payment.
+Deletion is disabled here. Retire employees with the "Deactivate" action
+instead (status → Inactive), so their HR record is kept.
 """
 
 from django.contrib import admin
@@ -81,9 +78,7 @@ class EmployeeAdmin(admin.ModelAdmin):
         """
         Employees are never deleted — retire them with the Deactivate action.
 
-        Returning False also removes the bulk "Delete selected" action, so
-        nobody can walk into the ProtectedError that SalaryPayment.employee
-        raises.
+        Returning False also removes the bulk "Delete selected" action.
         """
         return False
 
@@ -96,8 +91,7 @@ class EmployeeAdmin(admin.ModelAdmin):
         updated = queryset.update(status=Employee.Status.INACTIVE)
         self.message_user(
             request,
-            f"{updated} employee(s) marked Inactive. Their payment history is "
-            f"kept, but they can no longer be selected for new salary payments.",
+            f"{updated} employee(s) marked Inactive. Their record is kept.",
         )
 
     @admin.action(description="Reactivate selected employees")
@@ -112,8 +106,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """
         The full roster (active and inactive) is shown on the changelist, but
-        the raw-id chooser popup used when recording a salary payment defaults
-        to active employees only. An explicit ?status__exact= in the popup URL
+        the raw-id chooser popup defaults to active employees only. An explicit ?status__exact= in the popup URL
         still wins, so former staff remain reachable.
         """
         queryset = super().get_queryset(request)

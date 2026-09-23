@@ -6,7 +6,7 @@
 --
 -- Table names are the readable ones set via Meta.db_table / db_table on the
 -- M2M fields (customer_order, customer_order_item, employee, product,
--- salary_payment, sale, sale_item, user, user_group, user_permission).
+-- sale, sale_item, user, user_group, user_permission).
 -- Django's own auth_*/django_* tables keep their framework names.
 --
 -- Orders and sales are separate tables on purpose: an order records what the
@@ -215,22 +215,6 @@ CREATE TABLE `customer_order_item` (
   CONSTRAINT `customer_order_item_order_id_0d213d76_fk_customer_order_id` FOREIGN KEY (`order_id`) REFERENCES `customer_order` (`id`),
   CONSTRAINT `customer_order_item_product_id_a8dfa297_fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
   CONSTRAINT `customer_order_item_chk_1` CHECK ((`quantity` >= 0))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- -------------------------------------------------------------------------
--- salary app
--- -------------------------------------------------------------------------
-
-CREATE TABLE `salary_payment` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `amount` decimal(12,2) NOT NULL,
-  `payment_date` datetime(6) NOT NULL,
-  `payment_method` varchar(20) NOT NULL,
-  `remarks` longtext NOT NULL,
-  `employee_id` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` (`employee_id`),
-  CONSTRAINT `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employee` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- -------------------------------------------------------------------------

@@ -5,9 +5,8 @@ class Employee(models.Model):
     """
     Represents a factory employee.
 
-    Tracks personal details, employment information, and payroll data.
-    The salary field here stores the agreed/base salary. Actual payments
-    are recorded separately in the SalaryPayment model.
+    Tracks personal details, employment information, and the agreed
+    base salary.
     """
 
     user = models.OneToOneField(

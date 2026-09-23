@@ -38,7 +38,6 @@ urlpatterns = [
     path("api/", include("accounts.users_urls")),
     path("api/", include("inventory.urls")),
     path("api/", include("employees.urls")),
-    path("api/", include("salary.urls")),
     path("api/", include("orders.urls")),
     path("api/", include("sales.urls")),
     path("api/", include("reports.urls")),
