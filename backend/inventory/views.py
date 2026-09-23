@@ -2,7 +2,7 @@ from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdminOrInventoryManagerOrEmployeeReadOnly
+from accounts.permissions import IsAdminOrInventoryManagerOrStaffReadOnly
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -12,13 +12,13 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     Finished-products inventory.
 
-    ADMIN and INVENTORY_MANAGER get full CRUD. EMPLOYEE is read-only: they
+    ADMIN and INVENTORY_MANAGER get full CRUD. STAFF is read-only: they
     can see stock levels but cannot add, update or delete items.
     """
 
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrInventoryManagerOrEmployeeReadOnly]
+    permission_classes = [IsAdminOrInventoryManagerOrStaffReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["product_name", "sku"]
     ordering_fields = ["product_name", "selling_price", "quantity_in_stock", "created_at"]

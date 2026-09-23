@@ -24,7 +24,7 @@ class EmployeeApiTests(APITestCase):
         self.employee_user = User.objects.create_user(
             username="employee_user",
             password=self.password,
-            role=User.Role.EMPLOYEE,
+            role=User.Role.STAFF,
         )
 
         self.employee = Employee.objects.create(
@@ -160,10 +160,10 @@ class EmployeeSelfProfileTests(APITestCase):
             username="admin_user", password=self.password, role=User.Role.ADMIN
         )
         self.staff_user = User.objects.create_user(
-            username="staff_user", password=self.password, role=User.Role.EMPLOYEE
+            username="staff_user", password=self.password, role=User.Role.STAFF
         )
         self.other_user = User.objects.create_user(
-            username="other_staff", password=self.password, role=User.Role.EMPLOYEE
+            username="other_staff", password=self.password, role=User.Role.STAFF
         )
 
         self.own_record = Employee.objects.create(
@@ -203,7 +203,7 @@ class EmployeeSelfProfileTests(APITestCase):
 
     def test_unlinked_account_gets_a_helpful_404(self):
         unlinked = User.objects.create_user(
-            username="no_record", password=self.password, role=User.Role.EMPLOYEE
+            username="no_record", password=self.password, role=User.Role.STAFF
         )
         self.client.login(username=unlinked.username, password=self.password)
         response = self.client.get(reverse("employee-me"))

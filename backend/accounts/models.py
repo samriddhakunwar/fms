@@ -7,7 +7,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Admin"
         INVENTORY_MANAGER = "INVENTORY_MANAGER", "Inventory Manager"
-        EMPLOYEE = "EMPLOYEE", "Employee"
+        STAFF = "STAFF", "Staff"
 
     # Redeclared from PermissionsMixin purely to give the auto-created
     # join tables readable names (user_group / user_permission).
@@ -58,5 +58,5 @@ class User(AbstractUser):
         return self.role == self.Role.INVENTORY_MANAGER
 
     @property
-    def is_employee(self):
-        return self.role == self.Role.EMPLOYEE
+    def is_staff_member(self):
+        return self.role == self.Role.STAFF

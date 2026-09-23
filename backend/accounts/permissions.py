@@ -34,14 +34,14 @@ class IsInventoryManager(BasePermission):
         )
 
 
-class IsEmployee(BasePermission):
-    message = "Only Employee users may perform this action."
+class IsStaff(BasePermission):
+    message = "Only Staff users may perform this action."
 
     def has_permission(self, request, view):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role == User.Role.EMPLOYEE
+            and request.user.role == User.Role.STAFF
         )
 
 
@@ -56,14 +56,14 @@ class IsAdminOrInventoryManager(BasePermission):
         )
 
 
-class IsAdminOrInventoryManagerOrEmployeeReadOnly(BasePermission):
+class IsAdminOrInventoryManagerOrStaffReadOnly(BasePermission):
     """
-    Admin and Inventory Manager get full CRUD. Employees may read only —
+    Admin and Inventory Manager get full CRUD. Staff may read only —
     they need to see what is in stock, but must not add, update or delete
     items. Anonymous users get nothing.
     """
 
-    message = "Employees may only view inventory, not change it."
+    message = "Staff may only view inventory, not change it."
 
     def has_permission(self, request, view):
         user = request.user
@@ -74,7 +74,7 @@ class IsAdminOrInventoryManagerOrEmployeeReadOnly(BasePermission):
         if user.role in (User.Role.ADMIN, User.Role.INVENTORY_MANAGER):
             return True
 
-        return user.role == User.Role.EMPLOYEE and request.method in SAFE_METHODS
+        return user.role == User.Role.STAFF and request.method in SAFE_METHODS
 
 
 class IsAdminOrInventoryManagerReadOnly(BasePermission):

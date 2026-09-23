@@ -14,7 +14,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     Employee HR records.
 
     ADMIN has full CRUD. INVENTORY_MANAGER is read-only — managers need to see
-    staff records but must not change them. EMPLOYEE cannot reach the list or
+    staff records but must not change them. STAFF cannot reach the list or
     any record by id; the one thing they can read is their own profile, via
     the ``me`` action below.
     """

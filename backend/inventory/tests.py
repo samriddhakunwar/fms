@@ -23,7 +23,7 @@ class ProductApiTests(APITestCase):
         self.employee = User.objects.create_user(
             username="employee_user",
             password=self.password,
-            role=User.Role.EMPLOYEE,
+            role=User.Role.STAFF,
         )
 
         self.product = Product.objects.create(

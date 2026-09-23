@@ -30,7 +30,7 @@ class OrderApiTests(APITestCase):
         self.employee = User.objects.create_user(
             username="employee_user",
             password=self.password,
-            role=User.Role.EMPLOYEE,
+            role=User.Role.STAFF,
         )
         self.chair = Product.objects.create(
             product_name="Chair",

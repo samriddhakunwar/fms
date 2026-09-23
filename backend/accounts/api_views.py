@@ -54,7 +54,7 @@ _login_responses = {
         "On success the server creates a Django session (cookie) and returns "
         "basic user info. The session can then be used with other "
         "session-protected endpoints.\n\n"
-        "Roles: `ADMIN` | `INVENTORY_MANAGER` | `EMPLOYEE`"
+        "Roles: `ADMIN` | `INVENTORY_MANAGER` | `STAFF`"
     ),
     request_body=LoginSerializer,
     responses=_login_responses,

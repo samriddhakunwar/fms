@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 const ROLE_LABELS = {
   ADMIN: "Admin",
   INVENTORY_MANAGER: "Inventory Manager",
-  EMPLOYEE: "Employee",
+  STAFF: "Staff",
 };
 
 export default function DashboardLayout({ title, navItems, children }) {

@@ -97,7 +97,7 @@ class Command(BaseCommand):
                 first_name="Dan",
                 last_name="Miah",
                 email="dan@fms.local",
-                role=User.Role.EMPLOYEE,
+                role=User.Role.STAFF,
                 phone_number="01711-000004",
             ),
             dict(
@@ -105,7 +105,7 @@ class Command(BaseCommand):
                 first_name="Eva",
                 last_name="Begum",
                 email="eva@fms.local",
-                role=User.Role.EMPLOYEE,
+                role=User.Role.STAFF,
                 phone_number="01711-000005",
             ),
         ]
@@ -253,7 +253,7 @@ class Command(BaseCommand):
             ),
         ]
 
-        # The two EMPLOYEE logins get an HR record attached, so signing in as
+        # The two STAFF logins get an HR record attached, so signing in as
         # dan_emp / eva_emp shows a real profile rather than the "ask an
         # administrator to link one" notice.
         by_username = {user.username: user for user in users}

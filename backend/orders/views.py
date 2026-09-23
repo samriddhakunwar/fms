@@ -18,7 +18,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     ADMIN has full CRUD. INVENTORY_MANAGER may add, view and delete orders
     but never update one — the role matrix gives managers no amend rights, so
-    PUT/PATCH is refused at the API, not merely hidden in the UI. EMPLOYEE has
+    PUT/PATCH is refused at the API, not merely hidden in the UI. STAFF has
     no access at all.
 
     Fulfilling an order (admin only) is what turns it into a sale; see

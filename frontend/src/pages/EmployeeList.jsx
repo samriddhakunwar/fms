@@ -52,7 +52,7 @@ export default function EmployeeList() {
   const loadAccounts = async () => {
     try {
       const { data } = await api.get("/users/");
-      setAccounts(data.filter((account) => account.role === "EMPLOYEE"));
+      setAccounts(data.filter((account) => account.role === "STAFF"));
     } catch {
       // The link dropdown just stays empty; everything else still works.
     }

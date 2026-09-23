@@ -55,7 +55,7 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["EMPLOYEE"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={["STAFF"]} />}>
             <Route path="/employee-dashboard" element={<EmployeeLayout />}>
               <Route index element={<EmployeeDashboard />} />
               <Route path="inventory" element={<ProductList />} />

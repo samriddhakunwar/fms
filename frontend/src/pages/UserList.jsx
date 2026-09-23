@@ -8,14 +8,14 @@ const EMPTY_FORM = {
   last_name: "",
   email: "",
   phone_number: "",
-  role: "EMPLOYEE",
+  role: "STAFF",
   is_active: true,
 };
 
 const ROLE_LABELS = {
   ADMIN: "Admin",
   INVENTORY_MANAGER: "Inventory Manager",
-  EMPLOYEE: "Employee",
+  STAFF: "Staff",
 };
 
 export default function UserList() {
@@ -290,7 +290,7 @@ export default function UserList() {
                         >
                           <option value="ADMIN">Admin</option>
                           <option value="INVENTORY_MANAGER">Inventory Manager</option>
-                          <option value="EMPLOYEE">Employee</option>
+                          <option value="STAFF">Staff</option>
                         </select>
                       </div>
                       <div className="col-6 mb-3">

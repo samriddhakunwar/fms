@@ -19,7 +19,7 @@ class AuthApiTests(APITestCase):
         self.employee = User.objects.create_user(
             username="employee_user",
             password=self.password,
-            role=User.Role.EMPLOYEE,
+            role=User.Role.STAFF,
         )
 
     def test_valid_login_returns_user_and_role(self):
@@ -82,7 +82,7 @@ class UserManagementApiTests(APITestCase):
         self.employee = User.objects.create_user(
             username="employee_user",
             password=self.password,
-            role=User.Role.EMPLOYEE,
+            role=User.Role.STAFF,
         )
 
     def test_only_admin_can_list_users(self):
@@ -159,7 +159,7 @@ class AdminSelfLockoutTests(APITestCase):
 
     def test_admin_cannot_demote_own_account(self):
         response = self.client.patch(
-            reverse("user-detail", args=[self.admin.id]), {"role": "EMPLOYEE"}
+            reverse("user-detail", args=[self.admin.id]), {"role": "STAFF"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.admin.refresh_from_db()
@@ -188,7 +188,7 @@ class AdminSelfLockoutTests(APITestCase):
             {
                 "username": "weak_user",
                 "password": "password",
-                "role": "EMPLOYEE",
+                "role": "STAFF",
             },
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -211,7 +211,7 @@ class AdminSelfLockoutTests(APITestCase):
         self.assertEqual(
             self.client.post(
                 reverse("user-list"),
-                {"username": "x", "password": "SecurePass123!", "role": "EMPLOYEE"},
+                {"username": "x", "password": "SecurePass123!", "role": "STAFF"},
             ).status_code,
             status.HTTP_403_FORBIDDEN,
         )
