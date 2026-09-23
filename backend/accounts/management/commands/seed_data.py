@@ -288,52 +288,39 @@ class Command(BaseCommand):
             dict(
                 employee=employees[0],
                 amount=Decimal("28000.00"),
-                payment_date=timezone.datetime(2026, 7, 1, 10, 0, tzinfo=timezone.utc),
-                payment_method=SalaryPayment.PaymentMethod.BANK_TRANSFER,
                 remarks="Regular July 2026 salary.",
             ),
             dict(
                 employee=employees[1],
                 amount=Decimal("32000.00"),
-                payment_date=timezone.datetime(2026, 7, 2, 10, 0, tzinfo=timezone.utc),
-                payment_method=SalaryPayment.PaymentMethod.BANK_TRANSFER,
                 remarks="Regular July 2026 salary.",
             ),
             dict(
                 employee=employees[2],
                 amount=Decimal("38000.00"),
-                payment_date=timezone.datetime(2026, 7, 3, 10, 0, tzinfo=timezone.utc),
-                payment_method=SalaryPayment.PaymentMethod.CHEQUE,
                 remarks="Regular July 2026 salary.",
             ),
             dict(
                 employee=employees[3],
                 amount=Decimal("26000.00"),    # 25 000 base + 1 000 attendance bonus
-                payment_date=timezone.datetime(2026, 7, 4, 10, 0, tzinfo=timezone.utc),
-                payment_method=SalaryPayment.PaymentMethod.MOBILE_BANKING,
                 remarks="July salary + BDT 1,000 attendance bonus.",
             ),
             dict(
                 employee=employees[4],
                 amount=Decimal("22500.00"),    # Pro-rated — inactive mid-month
-                payment_date=timezone.datetime(2026, 7, 5, 10, 0, tzinfo=timezone.utc),
-                payment_method=SalaryPayment.PaymentMethod.CASH,
                 remarks="Final settlement — pro-rated for inactive status.",
             ),
         ]
 
         for data in records:
-            # Uniqueness guard: one payment per employee at the exact same timestamp
-            exists = SalaryPayment.objects.filter(
-                employee=data["employee"],
-                payment_date=data["payment_date"],
-            ).exists()
+            # Uniqueness guard: skip if this exact payment was already seeded
+            exists = SalaryPayment.objects.filter(**data).exists()
 
             if exists:
-                skip(f"SalaryPayment for {data['employee'].full_name} on {data['payment_date'].date()}")
+                skip(f"SalaryPayment for {data['employee'].full_name}")
             else:
                 payment = SalaryPayment.objects.create(**data)
-                ok(f"SalaryPayment: {payment.employee.full_name} — {payment.amount} via {payment.get_payment_method_display()}")
+                ok(f"SalaryPayment: {payment.employee.full_name} — {payment.amount}")
 
     # ------------------------------------------------------------------
     # orders.Order + orders.OrderItem

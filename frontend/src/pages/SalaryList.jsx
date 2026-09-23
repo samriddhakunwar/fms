@@ -4,16 +4,8 @@ import api, { getErrorMessage } from "../services/api";
 const EMPTY_FORM = {
   employee: "",
   amount: "",
-  payment_method: "CASH",
   remarks: "",
 };
-
-const PAYMENT_METHODS = [
-  { value: "CASH", label: "Cash" },
-  { value: "BANK_TRANSFER", label: "Bank Transfer" },
-  { value: "CHEQUE", label: "Cheque" },
-  { value: "MOBILE_BANKING", label: "Mobile Banking" },
-];
 
 export default function SalaryList() {
   const [payments, setPayments] = useState([]);
@@ -61,7 +53,6 @@ export default function SalaryList() {
     setForm({
       employee: payment.employee,
       amount: payment.amount,
-      payment_method: payment.payment_method,
       remarks: payment.remarks || "",
     });
     setFormErrors({});
@@ -128,8 +119,6 @@ export default function SalaryList() {
             <tr>
               <th>Employee</th>
               <th>Amount</th>
-              <th>Payment Date</th>
-              <th>Payment Method</th>
               <th>Remarks</th>
               <th>Actions</th>
             </tr>
@@ -137,13 +126,13 @@ export default function SalaryList() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-4">
+                <td colSpan={4} className="text-center py-4">
                   Loading…
                 </td>
               </tr>
             ) : payments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-4 text-muted">
+                <td colSpan={4} className="text-center py-4 text-muted">
                   No salary payments recorded.
                 </td>
               </tr>
@@ -152,11 +141,6 @@ export default function SalaryList() {
                 <tr key={payment.id}>
                   <td>{payment.employee_name}</td>
                   <td>{Number(payment.amount).toFixed(2)}</td>
-                  <td>{new Date(payment.payment_date).toLocaleString()}</td>
-                  <td>
-                    {PAYMENT_METHODS.find((m) => m.value === payment.payment_method)
-                      ?.label || payment.payment_method}
-                  </td>
                   <td>{payment.remarks || "—"}</td>
                   <td className="text-nowrap">
                     <button
@@ -225,33 +209,17 @@ export default function SalaryList() {
                       )}
                     </div>
 
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Amount</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="form-control"
-                          value={form.amount}
-                          onChange={handleFormChange("amount")}
-                          required
-                        />
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Payment Method</label>
-                        <select
-                          className="form-select"
-                          value={form.payment_method}
-                          onChange={handleFormChange("payment_method")}
-                        >
-                          {PAYMENT_METHODS.map((method) => (
-                            <option key={method.value} value={method.value}>
-                              {method.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="mb-3">
+                      <label className="form-label">Amount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="form-control"
+                        value={form.amount}
+                        onChange={handleFormChange("amount")}
+                        required
+                      />
                     </div>
 
                     <div className="mb-3">

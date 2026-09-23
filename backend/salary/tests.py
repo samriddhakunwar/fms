@@ -32,7 +32,6 @@ class SalaryPaymentApiTests(APITestCase):
         self.payment = SalaryPayment.objects.create(
             employee=self.employee_record,
             amount=Decimal("30000.00"),
-            payment_method=SalaryPayment.PaymentMethod.BANK_TRANSFER,
         )
 
     def test_only_admin_can_view_salary_payments(self):
@@ -51,7 +50,6 @@ class SalaryPaymentApiTests(APITestCase):
         payload = {
             "employee": self.employee_record.id,
             "amount": "5000.00",
-            "payment_method": "CASH",
             "remarks": "Bonus",
         }
         response = self.client.post(reverse("salarypayment-list"), payload)
@@ -83,7 +81,6 @@ class SalaryPaymentApiTests(APITestCase):
         SalaryPayment.objects.create(
             employee=other_employee,
             amount=Decimal("40000.00"),
-            payment_method=SalaryPayment.PaymentMethod.CASH,
         )
         self.client.login(username="admin_user", password=self.password)
         response = self.client.get(

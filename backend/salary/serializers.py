@@ -16,8 +16,6 @@ class SalaryPaymentSerializer(serializers.ModelSerializer):
             "employee",
             "employee_name",
             "amount",
-            "payment_date",
-            "payment_method",
             "remarks",
         ]
         read_only_fields = ["id"]

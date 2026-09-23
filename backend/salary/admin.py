@@ -3,8 +3,6 @@ salary/admin.py
 ===============
 Admin configuration for the SalaryPayment model.
 
-The payment_date field drives both the date hierarchy navigation and the
-list filter, making it easy to pull up payments for any given time period.
 Employee lookups use raw_id_fields so the selector stays fast even with a
 large workforce.
 """
@@ -20,8 +18,7 @@ class SalaryPaymentAdmin(admin.ModelAdmin):
     """
     Admin interface for recording and reviewing salary payments.
 
-    Each record is effectively a ledger entry: employee → amount → method →
-    date. Deleting a payment is allowed through the admin but should be done
+    Each record is effectively a ledger entry: employee → amount. Deleting a payment is allowed through the admin but should be done
     carefully to preserve payroll audit trails.
     """
 
@@ -32,17 +29,10 @@ class SalaryPaymentAdmin(admin.ModelAdmin):
     list_display = (
         "employee",       # Renders via Employee.__str__
         "amount",
-        "payment_date",
-        "payment_method",
     )
 
     # Make the employee clickable to open the change form
     list_display_links = ("employee",)
-
-    list_filter = (
-        "payment_date",    # Django built-in date hierarchy filter in sidebar
-        "payment_method",  # Cash / Bank Transfer / Cheque / Mobile Banking
-    )
 
     # Search across the employee's name and email (traverses the FK)
     search_fields = (
@@ -51,20 +41,13 @@ class SalaryPaymentAdmin(admin.ModelAdmin):
     )
 
     # Most recent payments first
-    ordering = ("-payment_date",)
-
-    # Date drill-down bar at the top of the changelist
-    date_hierarchy = "payment_date"
+    ordering = ("-id",)
 
     # ------------------------------------------------------------------
     # Detail (add / change) view
     # ------------------------------------------------------------------
 
     form = SalaryPaymentAdminForm  # Offers active employees only — see salary/forms.py
-
-    # payment_date is editable (admin can correct a date if needed), but
-    # we keep it visible so the default value is obvious.
-    readonly_fields = ()
 
     fieldsets = (
         (
@@ -73,8 +56,6 @@ class SalaryPaymentAdmin(admin.ModelAdmin):
                 "fields": (
                     "employee",
                     "amount",
-                    "payment_method",
-                    "payment_date",
                 ),
             },
         ),

@@ -10,13 +10,6 @@ import {
   stockStatusBreakdown,
 } from "../charts/aggregate";
 
-const PAYMENT_METHOD_LABELS = {
-  CASH: "Cash",
-  BANK_TRANSFER: "Bank Transfer",
-  CHEQUE: "Cheque",
-  MOBILE_BANKING: "Mobile Banking",
-};
-
 const EMPLOYEE_STATUS_LABELS = {
   ACTIVE: "Active",
   INACTIVE: "Inactive",
@@ -40,7 +33,6 @@ export default function AdminDashboard() {
   const [charts, setCharts] = useState({
     stock: [],
     employees: [],
-    payments: [],
     sales: [],
   });
   const [chartsLoading, setChartsLoading] = useState(true);
@@ -74,20 +66,14 @@ export default function AdminDashboard() {
       setChartsLoading(true);
       setChartsError("");
       try {
-        const [products, employees, payments, sales] = await Promise.all([
+        const [products, employees, sales] = await Promise.all([
           api.get("/products/"),
           api.get("/employees/"),
-          api.get("/salary-payments/"),
           api.get("/sales/"),
         ]);
         setCharts({
           stock: stockStatusBreakdown(products.data),
           employees: countByField(employees.data, "status", EMPLOYEE_STATUS_LABELS),
-          payments: countByField(
-            payments.data,
-            "payment_method",
-            PAYMENT_METHOD_LABELS
-          ),
           sales: dailySalesSeries(sales.data, 7),
         });
       } catch {
@@ -127,7 +113,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="row g-3 mb-3">
-        <div className="col-12 col-lg-4">
+        <div className="col-12 col-lg-6">
           <ChartCard
             title="Stock Status"
             subtitle="Products by stock level"
@@ -138,7 +124,7 @@ export default function AdminDashboard() {
           </ChartCard>
         </div>
 
-        <div className="col-12 col-lg-4">
+        <div className="col-12 col-lg-6">
           <ChartCard
             title="Employees"
             subtitle="Active vs inactive"
@@ -146,17 +132,6 @@ export default function AdminDashboard() {
             empty={charts.employees.length === 0}
           >
             <DonutChart data={charts.employees} />
-          </ChartCard>
-        </div>
-
-        <div className="col-12 col-lg-4">
-          <ChartCard
-            title="Salary Payments"
-            subtitle="By payment method"
-            {...chartState}
-            empty={charts.payments.length === 0}
-          >
-            <DonutChart data={charts.payments} />
           </ChartCard>
         </div>
       </div>
