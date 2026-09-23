@@ -58,7 +58,7 @@ export default function InventoryDashboard() {
 
   return (
     <>
-      <h2 className="mb-4">manager Dashboard</h2>
+      <h2 className="mb-4">Manager Dashboard</h2>
 
       <div className="row g-3 mb-4">
         {cards.map((card) => (

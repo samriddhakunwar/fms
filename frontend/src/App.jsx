@@ -1,23 +1,23 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./routes/ProtectedRoute";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 import AdminLayout from "./layouts/AdminLayout";
-import InventoryManagerLayout from "./layouts/InventoryManagerLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
+import InventoryManagerLayout from "./layouts/InventoryManagerLayout";
 
 import AdminDashboard from "./pages/AdminDashboard";
-import InventoryDashboard from "./pages/InventoryDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
-import EmployeeProfile from "./pages/EmployeeProfile";
-import ProductList from "./pages/ProductList";
 import EmployeeList from "./pages/EmployeeList";
-import SalaryList from "./pages/SalaryList";
+import EmployeeProfile from "./pages/EmployeeProfile";
+import InventoryDashboard from "./pages/InventoryDashboard";
 import OrdersPage from "./pages/OrdersPage";
-import SalesPage from "./pages/SalesPage";
+import ProductList from "./pages/ProductList";
 import ReportsPage from "./pages/ReportsPage";
+import SalaryList from "./pages/SalaryList";
+import SalesPage from "./pages/SalesPage";
 import UserList from "./pages/UserList";
 
 export default function App() {
