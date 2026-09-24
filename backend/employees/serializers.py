@@ -11,8 +11,6 @@ from .models import Employee
 class EmployeeSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True, default=None)
 
-    # Optional: create a login account for this employee in the same request,
-    # instead of making it on the Users page and linking it afterwards.
     login_username = serializers.CharField(
         write_only=True, required=False, allow_blank=True, max_length=150
     )
@@ -44,8 +42,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "username"]
 
     def validate_email(self, value):
-        # "" and null both mean "no email"; store NULL so the unique index
-        # does not treat two employees without an email as duplicates.
         return value or None
 
     def validate(self, attrs):
@@ -75,7 +71,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return attrs
 
     def _create_login(self, validated_data):
-        """Pops the login_* fields and, if a username was given, creates the account."""
         username = validated_data.pop("login_username", "")
         password = validated_data.pop("login_password", "")
         role = validated_data.pop("login_role", User.Role.STAFF)

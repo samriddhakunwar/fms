@@ -1,15 +1,3 @@
-"""
-reports/views.py
-================
-Read-only reporting endpoints. The app owns no models — it rolls up rows that
-live in sales/ and inventory/.
-
-Everything a report page needs comes back in one response, computed on the
-server, so the figures on a chart, a headline tile and the product breakdown
-can never disagree with each other the way three separate client-side
-aggregations can.
-"""
-
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -22,15 +10,12 @@ from accounts.permissions import IsAdminOrInventoryManager
 from fms.dates import day_range_filter
 from sales.models import Sale
 
-# A report spanning more days than this would render an unreadable axis and a
-# needlessly large payload; the range is clamped and the response says so.
 MAX_DAYS = 180
 
 DEFAULT_WINDOW_DAYS = 7
 
 
 def _parse_day(value, field):
-    """Parses an ISO date query parameter, or raises a message for the caller."""
     if not value:
         return None
     try:
@@ -40,21 +25,13 @@ def _parse_day(value, field):
 
 
 def _money(value):
-    """Two-decimal string, the same shape DRF gives a DecimalField."""
     return str(Decimal(value).quantize(Decimal("0.01")))
 
 
 @api_view(["GET"])
 @permission_classes([IsAdminOrInventoryManager])
 def sales_report(request):
-    """
-    Sales report for a date range.
-
-    Admin and manager both generate this; employees are refused by
-    the permission class. Query parameters ``start_date`` and ``end_date``
-    (YYYY-MM-DD) are both optional — with neither, the report covers the last
-    seven days, matching the dashboard.
-    """
+    """Sales report for a date range."""
     today = timezone.localdate()
 
     try:
@@ -68,8 +45,6 @@ def sales_report(request):
     if end is None:
         end = today
     if start is None:
-        # Half-open range: fall back to the earliest sale on record, or the
-        # end date itself when there are no sales at all.
         earliest = Sale.objects.order_by("sale_date").values_list(
             "sale_date", flat=True
         ).first()
@@ -92,8 +67,6 @@ def sales_report(request):
         .order_by("sale_date")
     )
 
-    # One dense bucket per day, so a day with no sales still reports a zero
-    # rather than dropping out of the series and distorting the trend.
     buckets = {}
     cursor = start
     while cursor <= end:
@@ -140,9 +113,6 @@ def sales_report(request):
         for day, values in sorted(buckets.items())
     ]
 
-    # The extremes look only at days that had a sale: over a long range most
-    # empty days are days the factory was simply closed, and a minimum of zero
-    # would say nothing.
     active = [
         (day, values) for day, values in sorted(buckets.items()) if values["count"]
     ]

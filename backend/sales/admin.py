@@ -1,44 +1,13 @@
-"""
-sales/admin.py
-==============
-Admin configuration for the Sale and SaleItem models.
-
-Key design decisions
----------------------
-• SaleItemInline — line items are managed on the Sale change form as a
-  tabular inline.  This gives a single-screen view of an entire invoice
-  (header + line items) rather than forcing the admin to navigate across
-  two separate pages.
-
-• subtotal is auto-computed by SaleItem.save() so it is shown as read-only
-  in the inline.  Likewise, total_amount on Sale is kept as readonly to
-  prevent manual tampering; it should be recalculated by application logic.
-
-• sale_date and invoice_number on Sale are readonly after creation to
-  preserve invoice integrity.
-"""
-
 from django.contrib import admin
 
 from .forms import SaleItemAdminForm
 from .models import Sale, SaleItem
 
 
-# ---------------------------------------------------------------------------
-# SaleItem inline  — shown embedded in the Sale change form
-# ---------------------------------------------------------------------------
-
 class SaleItemInline(admin.TabularInline):
-    """
-    Displays all line items of an invoice directly on the Sale change form.
-
-    TabularInline renders each SaleItem as a compact row in a table, which
-    is ideal for invoice-style data with multiple columns.
-    """
-
     model = SaleItem
-    form = SaleItemAdminForm  # Offers active products only — see sales/forms.py
-    extra = 1  # Always show one blank row for adding a new item
+    form = SaleItemAdminForm
+    extra = 1
 
     # Columns rendered inside the inline table
     fields = (
@@ -48,38 +17,21 @@ class SaleItemInline(admin.TabularInline):
         "subtotal",  # Read-only — computed by SaleItem.save()
     )
 
-    # subtotal is auto-calculated in the model's save() method; making it
-    # readonly prevents accidental manual edits and signals intent clearly.
     readonly_fields = ("subtotal",)
 
-    # Use a search popup for product selection — avoids a massive <select>
-    # if there are hundreds of products in the catalogue.
     raw_id_fields = ("product",)
 
 
-# ---------------------------------------------------------------------------
 # Sale admin
-# ---------------------------------------------------------------------------
-
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
-    """
-    Admin interface for the Sale (invoice) model.
-
-    The SaleItemInline embeds all line items so an entire invoice can be
-    created and edited from a single page.
-    """
-
     inlines = [SaleItemInline]
 
-    # ------------------------------------------------------------------
     # List view
-    # ------------------------------------------------------------------
-
     list_display = (
         "invoice_number",
         "sold_to",       # Customer the invoice was issued to
-        "order",         # The customer order this invoice came from, if any
+        "order",
         "total_amount",
         "sale_date",
     )
@@ -99,14 +51,7 @@ class SaleAdmin(admin.ModelAdmin):
     # Date drill-down navigation bar
     date_hierarchy = "sale_date"
 
-    # ------------------------------------------------------------------
     # Detail (add / change) view
-    # ------------------------------------------------------------------
-
-    # Once an invoice is created, its number and date should not be changed
-    # to preserve the financial audit trail.  total_amount is also readonly
-    # because it should be recalculated from line items by application code,
-    # not typed in manually.
     readonly_fields = ("invoice_number", "sale_date", "total_amount")
 
     raw_id_fields = ("order",)
@@ -135,27 +80,11 @@ class SaleAdmin(admin.ModelAdmin):
     )
 
 
-# ---------------------------------------------------------------------------
-# SaleItem admin (standalone — for viewing / filtering individual line items)
-# ---------------------------------------------------------------------------
-
 @admin.register(SaleItem)
 class SaleItemAdmin(admin.ModelAdmin):
-    """
-    Standalone admin for individual SaleItem records.
+    """Standalone admin for individual SaleItem records."""
 
-    Useful for auditing purposes — e.g. "show me every sale that included
-    Product X" — without having to open each invoice manually.
-
-    Note: Creating new SaleItems here bypasses the Sale total_amount update
-    and stock deduction guard only if done carelessly; prefer the inline on
-    the Sale change form for normal operations.
-    """
-
-    # ------------------------------------------------------------------
     # List view
-    # ------------------------------------------------------------------
-
     list_display = (
         "sale",        # Invoice this item belongs to
         "product",     # Renders via Product.__str__
@@ -167,7 +96,7 @@ class SaleItemAdmin(admin.ModelAdmin):
     list_display_links = ("sale", "product")
 
     list_filter = (
-        "sale__sale_date",  # Traverse FK to filter by invoice date
+        "sale__sale_date",
         "product",
     )
 
@@ -179,14 +108,9 @@ class SaleItemAdmin(admin.ModelAdmin):
 
     ordering = ("-sale__sale_date", "id")
 
-    # ------------------------------------------------------------------
     # Detail (add / change) view
-    # ------------------------------------------------------------------
+    form = SaleItemAdminForm
 
-    form = SaleItemAdminForm  # Offers active products only — see sales/forms.py
-
-    # subtotal is auto-computed; sale is the parent — both readonly here
-    # to reinforce that these should be managed via the Sale inline.
     readonly_fields = ("subtotal",)
 
     raw_id_fields = ("sale", "product")

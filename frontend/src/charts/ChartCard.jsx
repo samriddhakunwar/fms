@@ -1,8 +1,3 @@
-/**
- * The frame every chart sits in: title, fixed height, and the three states a
- * chart can be in before it has data. Keeping the height fixed across states
- * stops the dashboard reflowing as each request lands.
- */
 export default function ChartCard({
   title,
   subtitle,

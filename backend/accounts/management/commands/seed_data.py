@@ -1,21 +1,3 @@
-"""
-management/commands/seed_data.py
-=================================
-Populates the database with 5 realistic mock records for every model:
-
-  • accounts.User          — 5 users (Admin, 2 × manager, 2 × Employee)
-  • inventory.Product      — 5 products (factory goods)
-  • employees.Employee     — 5 employees (two linked to Employee logins)
-  • orders.Order + Item    — 5 customer orders across the status range
-  • sales.Sale + SaleItem  — 5 invoices with one line-item each
-
-Usage:
-    python manage.py seed_data
-
-The command is idempotent: running it twice will not duplicate records —
-it uses get_or_create / exists() guards on each unique field.
-"""
-
 from decimal import Decimal
 from typing import Any
 
@@ -25,10 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
-
 def ok(label: str) -> None:
     print(f"  ✅  {label}")
 
@@ -37,10 +16,7 @@ def skip(label: str) -> None:
     print(f"  ⏭   {label} (already exists)")
 
 
-# ---------------------------------------------------------------------------
 # Command
-# ---------------------------------------------------------------------------
-
 class Command(BaseCommand):
     help = "Seed 5 mock records for every FMS model (accounts, inventory, employees, orders, sales)."
 
@@ -56,10 +32,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("\n✔  Seeding complete.\n"))
 
-    # ------------------------------------------------------------------
     # accounts.User
-    # ------------------------------------------------------------------
-
     def _seed_users(self):
         from accounts.models import User
 
@@ -126,10 +99,7 @@ class Command(BaseCommand):
 
         return users
 
-    # ------------------------------------------------------------------
     # inventory.Product
-    # ------------------------------------------------------------------
-
     def _seed_products(self):
         from inventory.models import Product
 
@@ -165,7 +135,7 @@ class Command(BaseCommand):
                 product_name="Safety Gloves (Leather)",
                 description="Heat-resistant leather gloves for welding and cutting tasks.",
                 selling_price=Decimal("320.00"),
-                quantity_in_stock=15,        # ← intentionally low to trigger ⚠ Low Stock
+                quantity_in_stock=15,
                 minimum_stock_level=20,
             ),
             dict(
@@ -190,10 +160,7 @@ class Command(BaseCommand):
 
         return products
 
-    # ------------------------------------------------------------------
     # employees.Employee
-    # ------------------------------------------------------------------
-
     def _seed_employees(self, users):
         from employees.models import Employee
 
@@ -252,9 +219,6 @@ class Command(BaseCommand):
             ),
         ]
 
-        # The two STAFF logins get an HR record attached, so signing in as
-        # dan_emp / eva_emp shows a real profile rather than the "ask an
-        # administrator to link one" notice.
         by_username = {user.username: user for user in users}
         records[0]["user"] = by_username.get("dan_emp")
         records[1]["user"] = by_username.get("eva_emp")
@@ -274,21 +238,12 @@ class Command(BaseCommand):
 
         return employees
 
-    # ------------------------------------------------------------------
     # orders.Order + orders.OrderItem
-    # ------------------------------------------------------------------
-
     def _seed_orders(self, products):
-        """
-        Customer orders. These deliberately do NOT move stock — an order is a
-        commitment to supply, and the deduction happens when it is fulfilled
-        and an invoice is raised (see orders.OrderViewSet.fulfil).
-        """
         from orders.models import Order, OrderItem
 
         self.stdout.write(self.style.HTTP_INFO("\n── orders.Order + OrderItem ────────────────"))
 
-        # Each tuple: (order_no, customer, product_index, qty, status, order_date)
         records = [
             ("ORD-2026-0001", "Shyam Pvt. Ltd.",               0, 20, Order.Status.PENDING,   timezone.datetime(2026, 8,  1,  9, 0, tzinfo=timezone.utc)),
             ("ORD-2026-0002", "Himalaya Trading Concern",      1, 12, Order.Status.CONFIRMED, timezone.datetime(2026, 8,  4, 11, 0, tzinfo=timezone.utc)),
@@ -323,16 +278,12 @@ class Command(BaseCommand):
                 f"({order.get_status_display()}, to {customer})"
             )
 
-    # ------------------------------------------------------------------
     # sales.Sale + sales.SaleItem
-    # ------------------------------------------------------------------
-
     def _seed_sales(self, products):
         from sales.models import Sale, SaleItem
 
         self.stdout.write(self.style.HTTP_INFO("\n── sales.Sale + SaleItem ───────────────────"))
 
-        # Each tuple: (invoice_no, sold_to, product_index, qty, unit_price, sale_date)
         records = [
             ("INV-2026-0001", "Shyam Pvt. Ltd.",              0,  10, Decimal("1250.00"), timezone.datetime(2026, 7, 10, 9,  0, tzinfo=timezone.utc)),
             ("INV-2026-0002", "Himalaya Trading Concern",     1,   5, Decimal("875.50"),  timezone.datetime(2026, 7, 15, 11, 0, tzinfo=timezone.utc)),
@@ -348,8 +299,6 @@ class Command(BaseCommand):
 
             product = products[prod_idx]
 
-            # Create the Sale header first (total_amount starts at 0; app code
-            # should update it — here we set it to the single-item subtotal)
             subtotal = qty * unit_price
             sale = Sale.objects.create(
                 invoice_number=inv_no,
@@ -358,10 +307,6 @@ class Command(BaseCommand):
                 sale_date=sale_date,
             )
 
-            # Create the line item — SaleItem.save() will:
-            #   1. Check stock availability
-            #   2. Compute subtotal (quantity × unit_price)
-            #   3. Deduct quantity from product.quantity_in_stock
             SaleItem.objects.create(
                 sale=sale,
                 product=product,

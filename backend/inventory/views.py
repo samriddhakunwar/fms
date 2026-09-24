@@ -9,12 +9,7 @@ from .serializers import ProductSerializer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    """
-    Finished-products inventory.
-
-    ADMIN and INVENTORY_MANAGER get full CRUD. STAFF is read-only: they
-    can see stock levels but cannot add, update or delete items.
-    """
+    """Finished-products inventory."""
 
     queryset = Product.objects.all()
     serializer_class = ProductSerializer

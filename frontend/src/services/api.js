@@ -1,8 +1,5 @@
 import axios from "axios";
 
-// Relative by default so requests stay same-origin (the dev server proxies
-// /api to Django). Set VITE_API_BASE_URL to an absolute URL for deployments
-// where the API is not served from the same origin as the app.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 const api = axios.create({
@@ -17,8 +14,6 @@ function getCookie(name) {
 
 const UNSAFE_METHODS = new Set(["post", "put", "patch", "delete"]);
 
-// Django's SessionAuthentication requires the csrftoken cookie to be echoed
-// back as the X-CSRFToken header on every unsafe request.
 api.interceptors.request.use(async (config) => {
   if (UNSAFE_METHODS.has((config.method || "").toLowerCase())) {
     let token = getCookie("csrftoken");

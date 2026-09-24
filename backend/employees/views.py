@@ -10,14 +10,7 @@ from .serializers import EmployeeSerializer
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    """
-    Employee HR records.
-
-    ADMIN has full CRUD. INVENTORY_MANAGER is read-only — managers need to see
-    staff records but must not change them. STAFF cannot reach the list or
-    any record by id; the one thing they can read is their own profile, via
-    the ``me`` action below.
-    """
+    """Employee HR records."""
 
     queryset = Employee.objects.select_related("user").all()
     serializer_class = EmployeeSerializer
@@ -46,13 +39,6 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         url_path="me",
     )
     def me(self, request):
-        """
-        The caller's own HR record, looked up from the session user.
-
-        There is no id in the URL by design: the record is resolved from
-        ``request.user`` alone, so an employee cannot reach a colleague's
-        profile by editing an id — the detail route stays closed to them.
-        """
         employee = Employee.objects.select_related("user").filter(
             user=request.user
         ).first()

@@ -6,12 +6,7 @@ from accounts.models import User
 
 
 class Employee(models.Model):
-    """
-    Represents a factory employee.
-
-    Tracks personal details, employment information, and the agreed
-    base salary.
-    """
+    """Represents a factory employee."""
 
     user = models.OneToOneField(
         User,
@@ -35,8 +30,6 @@ class Employee(models.Model):
         max_length=255,
         verbose_name="Full Name",
     )
-    # Optional but unique. A missing email is stored as NULL rather than ""
-    # because the unique index allows many NULLs but only one empty string.
     email = models.EmailField(
         unique=True,
         blank=True,
@@ -74,7 +67,6 @@ class Employee(models.Model):
         verbose_name="Employment Status",
     )
 
-    # Added by Django at runtime; declared here for the type checker.
     user_id: int | None
     get_status_display: Callable[[], str]
 
@@ -94,5 +86,4 @@ class Employee(models.Model):
 
     @property
     def is_active(self) -> bool:
-        """Returns True if the employee is currently active."""
         return self.status == self.Status.ACTIVE

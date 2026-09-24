@@ -13,8 +13,6 @@ export default function EmployeeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Employees have read-only access to products, so the stock breakdown is the
-  // one report they can be shown.
   useEffect(() => {
     (async () => {
       setLoading(true);

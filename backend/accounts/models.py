@@ -11,8 +11,6 @@ class User(AbstractUser):
         INVENTORY_MANAGER = "INVENTORY_MANAGER", "Manager"
         STAFF = "STAFF", "Staff"
 
-    # Redeclared from PermissionsMixin purely to give the auto-created
-    # join tables readable names (user_group / user_permission).
     groups = models.ManyToManyField(
         Group,
         verbose_name="groups",
@@ -42,7 +40,6 @@ class User(AbstractUser):
         default=Role.ADMIN,
     )
 
-    # Added by Django at runtime; declared here for the type checker.
     get_role_display: Callable[[], str]
 
     class Meta:

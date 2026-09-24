@@ -2,17 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import api, { getErrorMessage } from "../services/api";
 
-/**
- * Customer orders — what was asked for, before anything leaves the factory.
- *
- * An order is not a sale: it moves no stock. Fulfilling one (Admin only)
- * raises the invoice and deducts the stock in a single server-side step.
- *
- * Admin gets full CRUD plus fulfilment. manager may raise, view and
- * delete orders but not amend them — the API refuses a manager's PUT/PATCH, so
- * hiding the Edit button here only saves them a pointless round trip.
- */
-
 const STATUS_BADGE = {
   PENDING: { label: "Pending", className: "bg-secondary" },
   CONFIRMED: { label: "Confirmed", className: "bg-primary" },
@@ -71,7 +60,7 @@ export default function OrdersPage() {
       const { data } = await api.get("/products/");
       setProducts(data);
     } catch {
-      // The product dropdown just stays empty; the table shows any error.
+      // Product dropdown just stays empty.
     }
   };
 

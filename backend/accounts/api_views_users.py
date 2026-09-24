@@ -7,17 +7,6 @@ from .serializers import UserManagementSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """
-    Admin-only user account management (create Manager/Staff accounts, change
-    role or active status, reset a password, deactivate). Full record editing
-    otherwise stays in Django Admin per the project spec.
-
-    An admin cannot lock themselves out through this endpoint: deleting your
-    own account, deactivating it, or demoting it out of the Admin role is
-    refused. Another admin can still do any of those to you, so the guard
-    stops accidents rather than policy.
-    """
-
     queryset = User.objects.all()
     serializer_class = UserManagementSerializer
     permission_classes = [IsAdmin]

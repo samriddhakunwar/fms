@@ -1,6 +1,3 @@
-# DRF ships no type stubs, so the checker sees test-client responses as plain
-# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
-# relations). Those attributes exist at runtime.
 # pyright: reportAttributeAccessIssue=false
 
 from decimal import Decimal
@@ -17,11 +14,6 @@ from .models import Order, OrderItem
 
 
 class OrderApiTests(APITestCase):
-    """
-    Role matrix for orders: Admin full CRUD, Manager add/view/delete but never
-    update, Employee nothing at all — enforced by the API, not the UI.
-    """
-
     def setUp(self):
         self.password = "TestPass123!"
         self.admin = User.objects.create_user(
@@ -60,10 +52,7 @@ class OrderApiTests(APITestCase):
         order.recalculate_total()
         return order
 
-    # ------------------------------------------------------------------
     # Creation
-    # ------------------------------------------------------------------
-
     def test_admin_can_create_order_and_total_is_computed(self):
         self._login("admin_user")
         response = self.client.post(
@@ -129,10 +118,7 @@ class OrderApiTests(APITestCase):
         response = self.client.get(reverse("order-list"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    # ------------------------------------------------------------------
     # Reading
-    # ------------------------------------------------------------------
-
     def test_manager_can_list_orders(self):
         self._create_order()
         self._login("manager_user")
@@ -146,10 +132,7 @@ class OrderApiTests(APITestCase):
         response = self.client.get(reverse("order-list"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    # ------------------------------------------------------------------
     # Updating — Admin only
-    # ------------------------------------------------------------------
-
     def test_admin_can_update_order(self):
         order = self._create_order()
         self._login("admin_user")
@@ -193,10 +176,7 @@ class OrderApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    # ------------------------------------------------------------------
     # Deleting
-    # ------------------------------------------------------------------
-
     def test_admin_can_delete_order(self):
         order = self._create_order()
         self._login("admin_user")
@@ -224,10 +204,6 @@ class OrderApiTests(APITestCase):
         response = self.client.delete(reverse("order-detail", args=[order.id]))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(Order.objects.filter(pk=order.pk).exists())
-
-    # ------------------------------------------------------------------
-    # Fulfilment — the Order → Sale bridge
-    # ------------------------------------------------------------------
 
     def test_fulfil_creates_sale_and_deducts_stock(self):
         order = self._create_order(quantity=4)
@@ -283,7 +259,6 @@ class OrderApiTests(APITestCase):
 
 
     def test_order_cannot_be_marked_fulfilled_by_hand(self):
-        """Only the fulfil action may set FULFILLED — it also raises the sale."""
         self._login("admin_user")
         response = self.client.post(
             reverse("order-list"),
@@ -321,6 +296,5 @@ class OrderApiTests(APITestCase):
         self.chair.refresh_from_db()
         self.assertEqual(self.chair.quantity_in_stock, 50)
 
-        # Open again, so it can be fulfilled a second time.
         response = self.client.post(reverse("order-fulfil", args=[order.id]))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

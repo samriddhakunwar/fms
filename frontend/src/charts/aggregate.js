@@ -1,16 +1,7 @@
-/**
- * Chart aggregation helpers.
- *
- * Every report already has a list endpoint, so the dashboards reuse those and
- * roll the rows up here rather than adding summary endpoints to the API.
- */
-
 import { CATEGORICAL, STOCK_STATUS } from "./theme";
 
-/** The de-emphasis gray used for a folded "Other" slice. */
 const OTHER_COLOR = "#8b95a1";
 
-/** Counts products per stock status, keeping the fixed In → Low → Out order. */
 export function stockStatusBreakdown(products) {
   const counts = { IN_STOCK: 0, LOW_STOCK: 0, OUT_OF_STOCK: 0 };
 
@@ -27,11 +18,6 @@ export function stockStatusBreakdown(products) {
   }));
 }
 
-/**
- * Counts rows by one field and paints them from the categorical slots in order.
- * Anything past the available slots folds into "Other" — a generated hue would
- * be indistinguishable from an existing one under colour-blindness.
- */
 export function countByField(rows, field, labels) {
   const counts = new Map();
 
@@ -62,7 +48,6 @@ export function countByField(rows, field, labels) {
   return slices;
 }
 
-/** Builds a dense last-N-days series, so days with no sales still show as 0. */
 export function dailySalesSeries(sales, days = 7) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -88,14 +73,6 @@ export function topProductsByStock(products, limit = 8) {
     }));
 }
 
-/**
- * Adds the display fields to a day series built by the API.
- *
- * The Sales Report gets its buckets from /reports/sales/ so the tiles, the
- * charts and the product breakdown are all the same arithmetic done once on
- * the server. All this does is attach the axis label and turn the decimal
- * strings DRF sends into numbers the charts can plot.
- */
 export function labelDays(days) {
   return days.map((day) => ({
     day: day.day,
@@ -105,7 +82,6 @@ export function labelDays(days) {
   }));
 }
 
-/** Totals each sale into its day bucket; days with no sales stay at zero. */
 function bucketByDay(sales, dayKeys) {
   const buckets = new Map(dayKeys.map((key) => [key, { revenue: 0, count: 0 }]));
 

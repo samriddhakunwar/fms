@@ -17,7 +17,6 @@ const EMPTY_FORM = {
   login_role: "STAFF",
 };
 
-// Value of the "Login Account" select that means "create a new login now".
 const NEW_LOGIN = "__new__";
 
 const ROLE_LABELS = {
@@ -27,15 +26,10 @@ const ROLE_LABELS = {
 };
 
 export default function EmployeeList() {
-  // Managers may view staff records but not change them; the API
-  // enforces that too, so this only keeps the UI honest about it.
   const { role } = useAuth();
   const canManage = role === "ADMIN";
 
   const [employees, setEmployees] = useState([]);
-  // Login accounts an HR record can be attached to, so an employee can see
-  // their own profile. Any role can be linked: salaried Admins and managers
-  // have HR records too. Admin-only data, fetched only when it is usable.
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -67,7 +61,7 @@ export default function EmployeeList() {
       const { data } = await api.get("/users/");
       setAccounts(data);
     } catch {
-      // The link dropdown just stays empty; everything else still works.
+      // Link dropdown just stays empty.
     }
   };
 
@@ -117,9 +111,6 @@ export default function EmployeeList() {
     event.preventDefault();
     setSaving(true);
     setFormErrors({});
-    // An empty select means "no linked account", which the API expects as null
-    // rather than an empty string. The login_* fields only go out when a new
-    // login is being created alongside the record.
     const { login_username, login_password, login_role, ...record } = form;
     const payload =
       form.user === NEW_LOGIN
@@ -403,7 +394,6 @@ export default function EmployeeList() {
                         <option value="">No linked account</option>
                         <option value={NEW_LOGIN}>+ Create new login…</option>
                         {accounts
-                          // Hide logins already linked to a different record.
                           .filter(
                             (account) =>
                               !employees.some(

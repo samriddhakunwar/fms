@@ -18,9 +18,6 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {
-      // This project fetches data on mount with plain useEffect (no data
-      // library like React Query). That's a standard, still-documented React
-      // pattern — the newer "set-state-in-effect" rule flags it regardless.
       'react-hooks/set-state-in-effect': 'off',
     },
   },

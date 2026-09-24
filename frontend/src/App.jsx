@@ -44,9 +44,6 @@ export default function App() {
               <Route index element={<InventoryDashboard />} />
               <Route path="products" element={<ProductList />} />
               <Route path="orders" element={<OrdersPage />} />
-              {/* Sales and staff records are read-only for this
-                  role: the pages hide every write action and the
-                  API refuses one if it is called directly. */}
               <Route path="sales" element={<SalesPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="staff" element={<EmployeeList />} />

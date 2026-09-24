@@ -1,6 +1,3 @@
-# DRF ships no type stubs, so the checker sees test-client responses as plain
-# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
-# relations). Those attributes exist at runtime.
 # pyright: reportAttributeAccessIssue=false
 
 from django.urls import reverse
@@ -134,7 +131,6 @@ class UserManagementApiTests(APITestCase):
 
 
     def test_role_is_required_when_creating_a_user(self):
-        """Leaving out role must not fall back to the model default (Admin)."""
         self.client.login(username="admin_user", password=self.password)
         response = self.client.post(
             reverse("user-list"),
@@ -146,11 +142,6 @@ class UserManagementApiTests(APITestCase):
 
 
 class AdminSelfLockoutTests(APITestCase):
-    """
-    User management is Admin-only, and an Admin cannot lock themselves out of
-    it by accident. Another Admin can still do any of these to them.
-    """
-
     def setUp(self):
         self.password = "TestPass123!"
         self.admin = User.objects.create_user(

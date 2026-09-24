@@ -65,14 +65,5 @@ class Product(models.Model):
     def __str__(self):
         return f"{self.product_name} (SKU: {self.sku})"
 
-    # ------------------------------------------------------------------ #
-    # Business logic                                                       #
-    # ------------------------------------------------------------------ #
-
     def is_low_stock(self) -> bool:
-        """
-        Returns True if the current stock is at or below the minimum stock level.
-
-        This is checked automatically after every sale (see SaleItem.save()).
-        """
         return self.quantity_in_stock <= self.minimum_stock_level

@@ -18,8 +18,6 @@ const STATUS_BADGE = {
 };
 
 export default function ProductList() {
-  // Employees reach this page read-only. The API enforces that too — this
-  // just stops the UI offering actions that would be rejected.
   const { role } = useAuth();
   const canManage = role === "ADMIN" || role === "INVENTORY_MANAGER";
 

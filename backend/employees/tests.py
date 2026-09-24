@@ -1,6 +1,3 @@
-# DRF ships no type stubs, so the checker sees test-client responses as plain
-# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
-# relations). Those attributes exist at runtime.
 # pyright: reportAttributeAccessIssue=false
 
 from datetime import date
@@ -43,7 +40,6 @@ class EmployeeApiTests(APITestCase):
         )
 
     def test_manager_can_read_but_not_change_employees(self):
-        """Managers view staff records; only Admin may write them."""
         self.client.login(username="manager_user", password=self.password)
 
         response = self.client.get(reverse("employee-list"))
@@ -264,11 +260,6 @@ class EmployeeApiTests(APITestCase):
 
 
 class EmployeeSelfProfileTests(APITestCase):
-    """
-    Staff see their own HR record and nobody else's. The record is resolved
-    from the session user, so there is no id to tamper with.
-    """
-
     def setUp(self):
         self.password = "TestPass123!"
         self.admin = User.objects.create_user(

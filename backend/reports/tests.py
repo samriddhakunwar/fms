@@ -1,6 +1,3 @@
-# DRF ships no type stubs, so the checker sees test-client responses as plain
-# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
-# relations). Those attributes exist at runtime.
 # pyright: reportAttributeAccessIssue=false
 
 from datetime import timedelta
@@ -17,11 +14,6 @@ from sales.models import Sale, SaleItem
 
 
 class SalesReportTests(APITestCase):
-    """
-    The sales report: Admin and Manager can generate it, Staff cannot, and the
-    figures it returns are the ones the page displays.
-    """
-
     def setUp(self):
         self.password = "TestPass123!"
         self.admin = User.objects.create_user(
@@ -54,8 +46,6 @@ class SalesReportTests(APITestCase):
         )
 
         self.today = timezone.localdate()
-        # Two invoices today, one the day before yesterday — so the series has
-        # a zero day in the middle and the extremes have something to pick.
         self._sale(self.today, [(self.chair, 2)])
         self._sale(self.today, [(self.table, 1)])
         self._sale(self.today - timedelta(days=2), [(self.chair, 1)])
@@ -83,10 +73,7 @@ class SalesReportTests(APITestCase):
         sale.save(update_fields=["total_amount"])
         return sale
 
-    # ------------------------------------------------------------------
     # Access
-    # ------------------------------------------------------------------
-
     def test_admin_can_generate_the_report(self):
         self.client.login(username="admin_user", password=self.password)
         response = self.client.get(reverse("report_sales"))
@@ -106,10 +93,7 @@ class SalesReportTests(APITestCase):
         response = self.client.get(reverse("report_sales"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    # ------------------------------------------------------------------
     # Content
-    # ------------------------------------------------------------------
-
     def test_default_window_is_the_last_seven_days(self):
         self.client.login(username="admin_user", password=self.password)
         data = self.client.get(reverse("report_sales")).data
@@ -139,8 +123,6 @@ class SalesReportTests(APITestCase):
 
         self.assertEqual(data["busiest_day"]["day"], self.today.isoformat())
         self.assertEqual(data["busiest_day"]["count"], 2)
-        # The quiet day is the one that had a single sale, not one of the
-        # empty days in between.
         self.assertEqual(
             data["quietest_day"]["day"], (self.today - timedelta(days=2)).isoformat()
         )

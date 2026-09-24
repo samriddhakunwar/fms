@@ -3,15 +3,6 @@ import { useEffect, useState } from "react";
 import api, { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-/**
- * The signed-in employee's own profile: their login details plus the HR record
- * linked to the account.
- *
- * The record comes from /employees/me/, which resolves it from the session —
- * there is no id in the URL to change, and the employee list and detail routes
- * are closed to this role, so a colleague's profile is not reachable from here
- * by any means.
- */
 export default function EmployeeProfile() {
   const { user } = useAuth();
 

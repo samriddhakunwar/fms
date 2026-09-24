@@ -18,7 +18,6 @@ def generate_invoice_number():
 
 
 class SaleItemInputSerializer(serializers.Serializer):
-    # Retired products stay on their old invoices but cannot be sold again.
     product = serializers.PrimaryKeyRelatedField(
         queryset=Product.objects.filter(is_active=True)
     )
@@ -37,8 +36,6 @@ class SaleItemSerializer(serializers.ModelSerializer):
 
 class SaleSerializer(serializers.ModelSerializer):
     items = SaleItemSerializer(many=True, read_only=True)
-    # Optional on update: an invoice may be corrected header-only (a
-    # misspelled customer) without touching its lines or the stock behind them.
     items_input = SaleItemInputSerializer(many=True, write_only=True, required=False)
     order_number = serializers.CharField(
         source="order.order_number", read_only=True, default=None
@@ -115,20 +112,6 @@ class SaleSerializer(serializers.ModelSerializer):
         return sale
 
     def update(self, instance, validated_data):
-        """
-        Corrects an existing invoice (Admin only — see SaleViewSet).
-
-        When the line items are re-sent they are rewritten wholesale: the old
-        rows are deleted, which returns their quantities to stock via the
-        SaleItem pre_delete signal, and the new rows are saved, which deducts
-        again with the usual stock check. Doing it as a replace rather than a
-        per-row diff keeps one code path, and the atomic block means a
-        correction that outruns stock leaves both the invoice and the
-        inventory exactly as they were.
-
-        The invoice number and date are never rewritten — an invoice keeps its
-        identity so the audit trail holds.
-        """
         items_data = validated_data.pop("items_input", None)
 
         with transaction.atomic():

@@ -23,13 +23,11 @@ export default function InventoryDashboard() {
         const { data } = await api.get("/products/summary/");
         setStats(data);
       } catch {
-        // Cards keep their placeholder dashes on failure.
+        // Cards keep placeholder dashes.
       }
     })();
   }, []);
 
-  // managers only have API access to products, so both charts here
-  // are drawn from that one list.
   useEffect(() => {
     (async () => {
       setChartsLoading(true);

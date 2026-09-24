@@ -12,18 +12,6 @@ import {
 
 import { AXIS_PROPS, INK, MARK, SERIES_HUE, TOOLTIP_PROPS } from "./theme";
 
-/**
- * Single-series charts over time.
- *
- * One series means no legend box — the card's title already says what is
- * plotted, and a one-swatch legend would only restate it. The grid is
- * horizontal-only and hairline so it stays behind the data.
- *
- * Revenue and count are deliberately two separate charts rather than one with
- * two y-axes: a dual-axis chart lets the author imply a correlation by choosing
- * the scales, which is the single most misleading thing a chart can do.
- */
-
 const GRID = <CartesianGrid stroke={INK.grid} strokeWidth={1} vertical={false} />;
 
 export function TrendBarChart({
@@ -42,9 +30,6 @@ export function TrendBarChart({
         <YAxis
           {...AXIS_PROPS}
           axisLine={false}
-          // Wide enough for the longest tick: a clipped axis label is worse
-          // than no axis at all. Ticks use the compact form, the tooltip the
-          // full one.
           width={68}
           tickFormatter={formatTick ?? formatValue}
         />
@@ -83,15 +68,12 @@ export function TrendLineChart({ data, xKey, yKey, height = 240, formatValue }) 
           formatter={(value) => [formatValue ? formatValue(value) : value, ""]}
         />
         <Line
-          // Straight segments between readings. A smoothed curve would draw
-          // values between two days that were never measured.
           type="linear"
           dataKey={yKey}
           stroke={SERIES_HUE}
           strokeWidth={MARK.lineWidth}
           strokeLinecap="round"
           strokeLinejoin="round"
-          // The 2px surface ring keeps dots legible where they cross the line.
           dot={{
             r: MARK.dotRadius,
             fill: SERIES_HUE,
@@ -106,10 +88,6 @@ export function TrendLineChart({ data, xKey, yKey, height = 240, formatValue }) 
   );
 }
 
-/**
- * Horizontal magnitude comparison — long product names need the room, which a
- * vertical column chart cannot give them without rotating the labels.
- */
 export function RankedBarChart({ data, height = 260 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -133,7 +111,6 @@ export function RankedBarChart({ data, height = 260 }) {
           dataKey="value"
           fill={SERIES_HUE}
           maxBarSize={MARK.barMaxWidth}
-          // Rounded data-end on the right, square against the baseline.
           radius={[0, 4, 4, 0]}
           isAnimationActive={false}
         />

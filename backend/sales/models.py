@@ -45,7 +45,6 @@ class Sale(models.Model):
         ),
     )
 
-    # Added by Django at runtime; declared here for the type checker.
     items: "models.Manager[SaleItem]"
 
     class Meta:
@@ -62,19 +61,6 @@ class Sale(models.Model):
 
 
 class SaleItem(models.Model):
-    """
-    Represents a single line item within a Sale (one product, its quantity,
-    and computed subtotal).
-
-    Business logic in save():
-      1. Prevents the sale if stock is insufficient (raises ValueError).
-      2. Reduces product.quantity_in_stock by the sold quantity.
-      3. Saves the updated product record.
-
-    The product FK uses PROTECT so you cannot delete a product
-    that has ever been sold — preserving the sales audit trail.
-    """
-
     sale = models.ForeignKey(
         Sale,
         on_delete=models.CASCADE,
@@ -106,7 +92,6 @@ class SaleItem(models.Model):
         help_text="quantity × unit_price — computed and stored on save.",
     )
 
-    # Added by Django at runtime; declared here for the type checker.
     product_id: int
 
     class Meta:
@@ -121,25 +106,7 @@ class SaleItem(models.Model):
             f"@ {self.unit_price} = {self.subtotal}"
         )
 
-    # ------------------------------------------------------------------ #
-    # Business logic — stock management                                   #
-    # ------------------------------------------------------------------ #
-
     def save(self, *args, **kwargs):
-        """
-        Custom save that enforces stock constraints and keeps inventory in
-        sync on both creation AND correction of an existing line item.
-
-        Every stock read/write happens on a row locked with
-        select_for_update() inside an atomic block, so concurrent sales of
-        the same product can't race past the stock check together. Editing
-        quantity or swapping the product only ever applies the *delta*
-        (never re-deducts the full quantity), so re-saving or admin edits
-        cannot double-deduct or silently corrupt stock.
-
-        Raises:
-            ValueError: If there is not enough stock to fulfil the change.
-        """
         from inventory.models import Product
 
         is_new = self.pk is None
@@ -200,13 +167,6 @@ class SaleItem(models.Model):
 
 @receiver(pre_delete, sender=SaleItem)
 def restore_stock_on_saleitem_delete(sender, instance, **kwargs):
-    """
-    Restores the sold quantity back to the product whenever a line item is
-    removed — whether that happens through the API (deleting a Sale cascades
-    to its items) or through Django Admin. Runs inside the same atomic block
-    as the delete so a failed delete can't leave stock adjusted without the
-    row actually being removed.
-    """
     from inventory.models import Product
 
     with transaction.atomic():
@@ -217,12 +177,6 @@ def restore_stock_on_saleitem_delete(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=Sale)
 def reopen_order_on_sale_delete(sender, instance, **kwargs):
-    """
-    Deleting the invoice behind a fulfilled order puts that order back to
-    Confirmed. The invoice's line items have already returned their stock (see
-    above), so the order is open again: it can be corrected, fulfilled again
-    or deleted, instead of being stuck as "Fulfilled" with no invoice.
-    """
     if instance.order_id is None:
         return
 

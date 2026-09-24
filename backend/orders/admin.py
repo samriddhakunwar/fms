@@ -1,14 +1,3 @@
-"""
-orders/admin.py
-===============
-Admin configuration for Order and its line items.
-
-Line items are edited inline on the order, mirroring the Sale admin, so a
-whole order is one screen. The order number and total are read-only: the
-number is generated on creation and the total is computed from the lines
-(recalculated in save_related once the inline rows have been written).
-"""
-
 from django.contrib import admin
 
 from .models import Order, OrderItem

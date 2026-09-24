@@ -1,6 +1,3 @@
-# DRF ships no type stubs, so the checker sees test-client responses as plain
-# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
-# relations). Those attributes exist at runtime.
 # pyright: reportAttributeAccessIssue=false
 
 from datetime import datetime, time, timedelta
@@ -90,7 +87,6 @@ class SaleApiTests(APITestCase):
         response = self.client.post(reverse("sale-list"), payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # Nothing should have been deducted — the whole sale rolled back.
         self.chair.refresh_from_db()
         self.table.refresh_from_db()
         self.assertEqual(self.chair.quantity_in_stock, 50)
@@ -124,9 +120,9 @@ class SaleApiTests(APITestCase):
         item.save()
 
         self.chair.refresh_from_db()
-        self.assertEqual(self.chair.quantity_in_stock, 42)  # 50 - 8, not 50 - 5 - 8
+        self.assertEqual(self.chair.quantity_in_stock, 42)
 
-        item.quantity = 2  # now sell fewer — should restore the difference
+        item.quantity = 2
         item.save()
 
         self.chair.refresh_from_db()
@@ -178,7 +174,6 @@ class SaleApiTests(APITestCase):
         )
 
     def _record_sale(self, quantity=1):
-        """Creates an invoice for `quantity` chairs and returns its id."""
         response = self.client.post(
             reverse("sale-list"),
             {
@@ -201,7 +196,6 @@ class SaleApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["sold_to"], "Shyam Industries Pvt. Ltd.")
 
-        # Header-only edits must leave the line items and stock alone.
         self.chair.refresh_from_db()
         self.assertEqual(self.chair.quantity_in_stock, 49)
 
@@ -222,7 +216,6 @@ class SaleApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Decimal(response.data["total_amount"]), Decimal("1000.00"))
 
-        # 3 of the 5 chairs come back to stock.
         self.chair.refresh_from_db()
         self.assertEqual(self.chair.quantity_in_stock, 48)
 
@@ -261,7 +254,6 @@ class SaleApiTests(APITestCase):
         self.assertEqual(self.chair.quantity_in_stock, 45)
 
     def test_manager_can_read_sales_but_never_write_them(self):
-        """The whole Manager sales rule, enforced at the API not the UI."""
         self._login_admin()
         sale_id = self._record_sale()
         self.client.logout()
@@ -308,7 +300,6 @@ class SaleApiTests(APITestCase):
 
     @override_settings(TIME_ZONE="Asia/Kathmandu")
     def test_today_follows_local_time_not_utc(self):
-        """00:30 local time is still the previous day in UTC; it must count as today."""
         self._login_admin()
         sale_id = self._record_sale()
         today = timezone.localdate()

@@ -1,12 +1,3 @@
-"""
-accounts/permissions.py
-========================
-Reusable DRF permission classes enforcing the three FMS roles at the API
-layer. React route guards are UI convenience only — these are the real
-authorization boundary and must be attached to every future endpoint that
-is role-restricted.
-"""
-
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from .models import User
@@ -57,12 +48,6 @@ class IsAdminOrInventoryManager(BasePermission):
 
 
 class IsAdminOrInventoryManagerOrStaffReadOnly(BasePermission):
-    """
-    Admin and manager get full CRUD. Staff may read only —
-    they need to see what is in stock, but must not add, update or delete
-    items. Anonymous users get nothing.
-    """
-
     message = "Staff may only view inventory, not change it."
 
     def has_permission(self, request, view):
@@ -78,14 +63,6 @@ class IsAdminOrInventoryManagerOrStaffReadOnly(BasePermission):
 
 
 class IsAdminOrInventoryManagerReadOnly(BasePermission):
-    """
-    Admin gets full CRUD. manager may read only.
-
-    Used by the sales endpoints so managers can view the Sales
-    Report and its charts without being able to record or delete an
-    invoice. Employees get nothing here — sales figures are not theirs.
-    """
-
     message = "Managers may only view sales, not change them."
 
     def has_permission(self, request, view):
@@ -104,15 +81,6 @@ class IsAdminOrInventoryManagerReadOnly(BasePermission):
 
 
 class IsAdminOrInventoryManagerNoUpdate(BasePermission):
-    """
-    Admin gets full CRUD. manager may create, read and delete but
-    never update.
-
-    Used by the orders endpoints: the role matrix lets a manager raise and
-    cancel an order but gives them no amend rights, so PUT/PATCH is refused
-    here rather than merely hidden in the React UI. Employees get nothing.
-    """
-
     message = "Managers may not update orders."
 
     def has_permission(self, request, view):

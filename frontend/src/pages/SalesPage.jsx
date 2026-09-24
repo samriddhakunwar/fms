@@ -7,9 +7,6 @@ function emptyLine() {
 }
 
 export default function SalesPage() {
-  // managers reach this page read-only: they may see invoices but
-  // never record, correct or delete one. The API refuses every write from them
-  // too — this only stops the UI offering what would be rejected.
   const { role } = useAuth();
   const canManage = role === "ADMIN";
 
@@ -50,7 +47,7 @@ export default function SalesPage() {
       const { data } = await api.get("/products/");
       setProducts(data);
     } catch {
-      // Product dropdown just stays empty; the table above shows any error.
+      // Product dropdown just stays empty.
     }
   };
 
@@ -137,8 +134,6 @@ export default function SalesPage() {
     setSaving(true);
     try {
       if (editingId) {
-        // Rewriting the lines returns the old quantities to stock and deducts
-        // the new ones server-side, so the product list is reloaded as well.
         await api.put(`/sales/${editingId}/`, payload);
       } else {
         await api.post("/sales/", payload);
@@ -158,7 +153,6 @@ export default function SalesPage() {
     try {
       await api.delete(`/sales/${deleteTarget.id}/`);
       setDeleteTarget(null);
-      // Deleting an invoice puts its quantities back into stock.
       await Promise.all([loadSales(), loadProducts()]);
     } catch (err) {
       setError(getErrorMessage(err));

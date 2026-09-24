@@ -1,12 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
 
-/* ---------------------------------------------------------------------------
- * Design tokens
- *
- * Every hue here is the one the app already used — Bootstrap's palette plus
- * the existing page background and ink. Nothing is re-hued; the tints are
- * alpha/mixes of those same colours so badges and hovers stay on-theme.
- * ------------------------------------------------------------------------- */
 :root {
   --fms-ink: #18212b;
   --fms-ink-soft: #5b6774;
@@ -18,12 +11,8 @@
   --fms-line-soft: #eef1f5;
 
   --fms-primary: #0a58ca;
-  /* Bootstrap's own darker steps of the same blue — used for the login
-     backdrop so it deepens the theme rather than introducing a new hue. */
   --fms-primary-deep: #084298;
   --fms-primary-deeper: #052c65;
-  /* The top bar and the selected sidebar item are set deliberately, off the
-     primary ramp above: a deep navy bar with a brighter selected pill. */
   --fms-nav: #052f6e;
   --fms-nav-active: #3081f9;
 
@@ -44,9 +33,6 @@
   --fms-radius: 12px;
   --fms-radius-sm: 8px;
 
-  /* Bridge the blue into Bootstrap's own primary. Bootstrap hardcodes the
-     stock #0d6efd in several component rules, so without this the spinner,
-     links and checkboxes would keep the old lighter blue. */
   --bs-primary: #0a58ca;
   --bs-primary-rgb: 10, 88, 202;
   --bs-link-color: #0a58ca;
@@ -87,9 +73,6 @@ button {
   cursor: pointer;
 }
 
-/* ---------------------------------------------------------------------------
- * Typography — Manrope was already being fetched but never applied.
- * ------------------------------------------------------------------------- */
 h1,
 h2,
 h3,
@@ -112,30 +95,22 @@ h2 {
   color: var(--fms-ink-soft) !important;
 }
 
-/* Numbers line up column-to-column instead of drifting. */
 td,
 th,
 .card h3 {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------------------------------------------------------------------------
- * Top bar
- * ------------------------------------------------------------------------- */
+/* Top bar */
 .navbar.bg-primary {
   background: var(--fms-nav) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 1px 12px rgba(16, 24, 40, 0.16);
   padding-top: 0.84rem;
   padding-bottom: 0.84rem;
-  /* Bootstrap's own brand padding, scaled by the same 1.2 — the brand is the
-     tallest thing in the bar, so leaving this at its default would hold the
-     height back. */
   --bs-navbar-brand-padding-y: 0.375rem;
 }
 
-/* The shared heading rule above sets a dark ink colour; the brand sits on the
-   blue bar, so it keeps Bootstrap's light text. */
 .navbar-dark .navbar-brand,
 .navbar.bg-primary .navbar-brand {
   color: #fff;
@@ -144,8 +119,6 @@ th,
   letter-spacing: -0.01em;
 }
 
-/* The bar's contents are scaled by the same 1.2 factor as its padding, so the
-   whole top bar grows as one piece instead of gaining empty space. */
 .navbar.bg-primary .btn-sm {
   padding: 0.36rem 0.78rem;
   font-size: 0.98rem;
@@ -160,8 +133,6 @@ th,
   font-size: 1.05rem;
 }
 
-/* At the larger size the long brand would push the logout button onto a second
-   row on phones. Keep the bar to a single row and let the title ellipsise. */
 .navbar.bg-primary {
   flex-wrap: nowrap;
 }
@@ -172,9 +143,7 @@ th,
   text-overflow: ellipsis;
 }
 
-/* ---------------------------------------------------------------------------
- * Sidebar
- * ------------------------------------------------------------------------- */
+/* Sidebar */
 aside.bg-light {
   background: var(--fms-surface) !important;
   border-right: 1px solid var(--fms-line) !important;
@@ -194,8 +163,6 @@ aside .nav-link:hover {
 }
 
 aside .nav-link.active {
-  /* .nav-pills .nav-link.active outranks this selector, so the colour has to
-     go through Bootstrap's own variable or the pill keeps the stock blue. */
   --bs-nav-pills-link-active-bg: var(--fms-nav-active);
   background: var(--fms-nav-active);
   color: #fff !important;
@@ -203,10 +170,6 @@ aside .nav-link.active {
   box-shadow: 0 1px 2px rgba(48, 129, 249, 0.32);
 }
 
-/* ---------------------------------------------------------------------------
- * Page header — the title row that carries the Add action. It reuses the top
- * bar's blue so a list page reads as one surface with the chrome above it.
- * ------------------------------------------------------------------------- */
 .page-head {
   background: var(--fms-primary);
   border-radius: var(--fms-radius);
@@ -218,8 +181,6 @@ aside .nav-link.active {
   color: #fff;
 }
 
-/* A blue-on-blue primary button would vanish, so the Add action inverts to a
-   white chip. The label uses the deeper blue for legible contrast on white. */
 .page-head .btn-primary {
   background: #fff;
   border-color: #fff;
@@ -235,10 +196,6 @@ aside .nav-link.active {
   box-shadow: 0 3px 10px rgba(16, 24, 40, 0.18);
 }
 
-/* ---------------------------------------------------------------------------
- * Modals — the Add / Edit / Delete dialogs take the same blue header, so the
- * action that opened them and the dialog itself match.
- * ------------------------------------------------------------------------- */
 .modal-header {
   background: var(--fms-primary);
   border-bottom-color: transparent;
@@ -258,9 +215,7 @@ aside .nav-link.active {
   opacity: 1;
 }
 
-/* ---------------------------------------------------------------------------
- * Cards
- * ------------------------------------------------------------------------- */
+/* Cards */
 .card {
   border: 1px solid var(--fms-line);
   border-radius: var(--fms-radius);
@@ -275,7 +230,6 @@ aside .nav-link.active {
   padding: 1.15rem 1.25rem;
 }
 
-/* Dashboard stat tiles: the number carries the card. */
 .card h3 {
   font-size: 2rem;
   font-weight: 800;
@@ -291,9 +245,6 @@ aside .nav-link.active {
   color: var(--fms-ink-faint) !important;
 }
 
-/* ---------------------------------------------------------------------------
- * Tables — lighter rules, roomier rows, quiet column headers.
- * ------------------------------------------------------------------------- */
 .table {
   --bs-table-border-color: var(--fms-line-soft);
   border-color: var(--fms-line-soft);
@@ -331,19 +282,13 @@ aside .nav-link.active {
   background: var(--fms-primary-wash);
 }
 
-/* Wrap bare tables in the same surface treatment the cards get. */
 .table-responsive {
   background: var(--fms-surface);
   border: 1px solid var(--fms-line);
   border-radius: var(--fms-radius);
   box-shadow: var(--fms-shadow-sm);
-  /* Bootstrap's own overflow-x: auto stays in force — it is what lets wide
-     tables scroll on narrow screens, and it already clips the corners. */
 }
 
-/* ---------------------------------------------------------------------------
- * Badges — same green/amber/red, as soft pills rather than solid blocks.
- * ------------------------------------------------------------------------- */
 .badge {
   border-radius: 999px;
   padding: 0.34em 0.7em;
@@ -372,9 +317,7 @@ aside .nav-link.active {
   color: var(--fms-ink-soft) !important;
 }
 
-/* ---------------------------------------------------------------------------
- * Buttons
- * ------------------------------------------------------------------------- */
+/* Buttons */
 .btn {
   border-radius: var(--fms-radius-sm);
   font-weight: 600;
@@ -402,7 +345,6 @@ aside .nav-link.active {
   font-size: 0.82rem;
 }
 
-/* Row actions read as quiet links until you reach for them. */
 .table .btn-outline-primary,
 .table .btn-outline-danger {
   border-color: transparent;
@@ -429,8 +371,6 @@ aside .nav-link.active {
   color: #b02a37;
 }
 
-/* Bootstrap writes the stock blue straight into these two, so they need the
-   token restating rather than inheriting it. */
 .btn-outline-primary {
   --bs-btn-color: var(--fms-primary);
   --bs-btn-border-color: var(--fms-primary);
@@ -451,9 +391,7 @@ aside .nav-link.active {
   box-shadow: 0 0 0 3px var(--fms-primary-ring);
 }
 
-/* ---------------------------------------------------------------------------
- * Forms
- * ------------------------------------------------------------------------- */
+/* Forms */
 .form-label {
   font-size: 0.82rem;
   font-weight: 600;
@@ -488,9 +426,7 @@ a:focus-visible {
   box-shadow: 0 0 0 3px var(--fms-primary-ring);
 }
 
-/* ---------------------------------------------------------------------------
- * Tabs (Reports)
- * ------------------------------------------------------------------------- */
+/* Tabs (Reports) */
 .nav-tabs {
   border-bottom: 1px solid var(--fms-line);
   gap: 0.15rem;
@@ -517,9 +453,7 @@ a:focus-visible {
   border-bottom-color: var(--fms-primary);
 }
 
-/* ---------------------------------------------------------------------------
- * Alerts
- * ------------------------------------------------------------------------- */
+/* Alerts */
 .alert {
   border-radius: var(--fms-radius-sm);
   border-width: 1px;
@@ -532,10 +466,6 @@ a:focus-visible {
   color: #b02a37;
 }
 
-/* ---------------------------------------------------------------------------
- * Login — the one full-page surface, so it carries the brand blue outright.
- * The card stays white so the form keeps its dark-on-light contrast.
- * ------------------------------------------------------------------------- */
 .vh-100.bg-light {
   background: var(--fms-page) !important;
 }
@@ -544,13 +474,9 @@ a:focus-visible {
   border: 0;
   border-radius: 16px;
   box-shadow: var(--fms-shadow-lg) !important;
-  /* Clips the headline band to the card's rounded top corners. */
   overflow: hidden;
 }
 
-/* The headline sits on the brand blue, bled out to the card's edges so it
-   reads as a header band. The negative margins cancel .card-body's p-4
-   (1.5rem), which is the padding this card actually uses. */
 .vh-100.bg-light .card h1 {
   margin: -1.5rem -1.5rem 1.15rem;
   padding: 1.15rem 1.5rem;
@@ -564,9 +490,7 @@ a:focus-visible {
   font-weight: 800;
 }
 
-/* ---------------------------------------------------------------------------
- * Scrollbars + motion
- * ------------------------------------------------------------------------- */
+/* Scrollbars + motion */
 main::-webkit-scrollbar,
 aside::-webkit-scrollbar {
   width: 10px;

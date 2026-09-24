@@ -14,17 +14,7 @@ from .serializers import OrderSerializer
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    """
-    Customer orders.
-
-    ADMIN has full CRUD. INVENTORY_MANAGER may add, view and delete orders
-    but never update one — the role matrix gives managers no amend rights, so
-    PUT/PATCH is refused at the API, not merely hidden in the UI. STAFF has
-    no access at all.
-
-    Fulfilling an order (admin only) is what turns it into a sale; see
-    ``fulfil`` below.
-    """
+    """Customer orders."""
 
     queryset = Order.objects.prefetch_related("items__product").select_related("sale")
     serializer_class = OrderSerializer
@@ -49,8 +39,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_destroy(self, instance):
-        # A fulfilled order is the paper trail behind an invoice; deleting it
-        # would leave the sale unexplained. Delete the invoice first.
         if instance.status == Order.Status.FULFILLED:
             raise ValidationError(
                 "A fulfilled order cannot be deleted. Delete its invoice first "
@@ -73,15 +61,6 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdmin])
     def fulfil(self, request, pk=None):
-        """
-        Turns an open order into a sale: raises the invoice, deducts the stock,
-        and marks the order fulfilled.
-
-        Admin-only, because it *creates a sale* — managers may never do that,
-        and routing it through this action keeps that boundary in one place.
-        The whole thing is one transaction, so a line that outruns stock leaves
-        the order and the inventory untouched.
-        """
         order = self.get_object()
 
         if order.status == Order.Status.FULFILLED:
@@ -127,7 +106,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order.status = Order.Status.FULFILLED
                 order.save(update_fields=["status"])
         except ValueError as exc:
-            # Raised by SaleItem.save() when stock is insufficient.
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(SaleSerializer(sale).data, status=status.HTTP_201_CREATED)

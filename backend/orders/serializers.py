@@ -17,7 +17,6 @@ def generate_order_number():
 
 
 class OrderItemInputSerializer(serializers.Serializer):
-    # Retired products stay on their old orders but cannot be ordered again.
     product = serializers.PrimaryKeyRelatedField(
         queryset=Product.objects.filter(is_active=True)
     )
@@ -71,7 +70,6 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
     def get_invoice_number(self, obj):
-        """The invoice this order became, once it has been fulfilled."""
         sale = getattr(obj, "sale", None)
         return sale.invoice_number if sale else None
 
@@ -82,9 +80,6 @@ class OrderSerializer(serializers.ModelSerializer):
         return value
 
     def validate_status(self, value):
-        # FULFILLED is only ever set by the fulfil action, which also raises the
-        # invoice and moves the stock. Setting it by hand would leave an order
-        # marked fulfilled with no sale behind it.
         if value == Order.Status.FULFILLED and getattr(self.instance, "status", None) != value:
             raise serializers.ValidationError(
                 "An order becomes Fulfilled only through the fulfil action."
@@ -97,8 +92,6 @@ class OrderSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        # Only enforced on create; an update may legitimately leave the lines
-        # alone and change only the header fields.
         if self.instance is None and not attrs.get("items_input"):
             raise serializers.ValidationError(
                 {"items_input": "An order must include at least one item."}
@@ -106,7 +99,6 @@ class OrderSerializer(serializers.ModelSerializer):
         return attrs
 
     def _write_items(self, order, items_data):
-        """Replaces the order's lines. No stock moves — orders never touch it."""
         order.items.all().delete()
         for item in items_data:
             product = item["product"]
@@ -133,9 +125,6 @@ class OrderSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         items_data = validated_data.pop("items_input", None)
 
-        # A fulfilled order has an invoice hanging off it and a stock movement
-        # behind it; editing it after the fact would silently diverge from the
-        # sale. Cancelled orders are closed for the same reason.
         if not instance.is_open:
             raise serializers.ValidationError(
                 f"A {instance.get_status_display().lower()} order can no longer "

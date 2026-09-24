@@ -17,7 +17,6 @@ const EMPLOYEE_STATUS_LABELS = {
 
 const money = (value) => `Rs ${Number(value).toLocaleString()}`;
 
-// Axis ticks get the short form so they fit; the tooltip still shows exact.
 const moneyTick = (value) =>
   value >= 1000 ? `Rs ${Math.round(value / 1000)}k` : `Rs ${value}`;
 
@@ -54,13 +53,11 @@ export default function AdminDashboard() {
           todays_revenue: Number(salesRes.data.todays_revenue).toFixed(2),
         });
       } catch {
-        // Cards keep their placeholder dashes on failure.
+        // Cards keep placeholder dashes.
       }
     })();
   }, []);
 
-  // The report list endpoints carry everything the charts need, so they are
-  // rolled up here rather than through extra summary endpoints.
   useEffect(() => {
     (async () => {
       setChartsLoading(true);

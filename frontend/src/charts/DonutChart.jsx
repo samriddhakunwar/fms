@@ -9,14 +9,6 @@ import {
 
 import { INK, MARK, TOOLTIP_PROPS } from "./theme";
 
-/**
- * Part-to-whole donut.
- *
- * Every slice is directly labelled with its count and the legend repeats the
- * category name, so identity never depends on telling two hues apart. Slices
- * under 5% are left unlabelled rather than allowed to collide — their values
- * stay in the legend and tooltip, so nothing is hidden.
- */
 export default function DonutChart({ data, height = 260, valueSuffix = "" }) {
   const total = data.reduce((sum, slice) => sum + slice.value, 0);
 
@@ -32,7 +24,6 @@ export default function DonutChart({ data, height = 260, valueSuffix = "" }) {
       <text
         x={x}
         y={y}
-        // Labels wear ink, never the slice colour — the mark carries identity.
         fill={INK.secondary}
         fontSize={12}
         fontWeight={600}
@@ -55,7 +46,6 @@ export default function DonutChart({ data, height = 260, valueSuffix = "" }) {
           cy="45%"
           innerRadius="52%"
           outerRadius="76%"
-          // The 2px surface-coloured gap that separates touching segments.
           stroke={INK.surface}
           strokeWidth={MARK.gapWidth}
           paddingAngle={1}

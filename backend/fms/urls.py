@@ -7,9 +7,7 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
 
-# ---------------------------------------------------------------------------
 # Swagger / OpenAPI schema view
-# ---------------------------------------------------------------------------
 schema_view = get_schema_view(
     openapi.Info(
         title="Factory Management System API",
@@ -22,12 +20,8 @@ schema_view = get_schema_view(
 )
 
 
-# ---------------------------------------------------------------------------
 # URL patterns
-# ---------------------------------------------------------------------------
 urlpatterns = [
-    # Root → redirect to the API docs. There is no server-rendered UI; the
-    # React app in ../frontend is the only front end.
     path("", lambda request: redirect("schema-swagger-ui"), name="root"),
 
     # Django admin panel
@@ -56,7 +50,6 @@ urlpatterns = [
         name="schema-redoc",
     ),
 
-    # Raw OpenAPI JSON (useful for importing into Postman, etc.)
     path(
         "api/",
         schema_view.without_ui(cache_timeout=0),

@@ -6,19 +6,6 @@ from django.utils import timezone
 
 
 class Order(models.Model):
-    """
-    A customer order — what the customer *asked for*, recorded before the
-    goods leave the factory.
-
-    An Order is deliberately NOT a Sale. It is a commitment to supply, so it
-    does not touch stock: quantities are reserved on paper only, and the
-    inventory deduction happens once the order is fulfilled and an invoice
-    (sales.Sale) is raised from it. Keeping the two apart means a cancelled
-    or still-pending order never distorts stock levels or revenue figures.
-
-    See sales.Sale.order for the link between the two.
-    """
-
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         CONFIRMED = "CONFIRMED", "Confirmed"
@@ -63,7 +50,6 @@ class Order(models.Model):
         verbose_name="Notes",
     )
 
-    # Added by Django at runtime; declared here for the type checker.
     items: "models.Manager[OrderItem]"
     get_status_display: Callable[[], str]
 
@@ -81,11 +67,9 @@ class Order(models.Model):
 
     @property
     def is_open(self) -> bool:
-        """True while the order can still be edited or fulfilled."""
         return self.status in (self.Status.PENDING, self.Status.CONFIRMED)
 
     def recalculate_total(self, save=True):
-        """Totals the line items. Called after the items are written."""
         total = sum(
             (item.subtotal for item in self.items.all()), Decimal("0")
         )
@@ -96,13 +80,7 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    """
-    One product line on an order.
-
-    unit_price is snapshotted from the product at the time of ordering so a
-    later price change does not silently re-price an open order. No stock is
-    moved here — that is the invoice's job (see sales.SaleItem).
-    """
+    """One product line on an order."""
 
     order = models.ForeignKey(
         Order,
