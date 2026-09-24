@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models, transaction
 from django.db.models.signals import post_delete, pre_delete
 from django.dispatch import receiver
@@ -21,7 +22,7 @@ class Sale(models.Model):
     total_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,
-        default=0,
+        default=Decimal("0"),
         verbose_name="Total Amount",
         help_text="Grand total of all line items in this invoice.",
     )
@@ -43,6 +44,9 @@ class Sale(models.Model):
             "without it."
         ),
     )
+
+    # Added by Django at runtime; declared here for the type checker.
+    items: "models.Manager[SaleItem]"
 
     class Meta:
         db_table = "sale"
@@ -101,6 +105,9 @@ class SaleItem(models.Model):
         verbose_name="Subtotal",
         help_text="quantity × unit_price — computed and stored on save.",
     )
+
+    # Added by Django at runtime; declared here for the type checker.
+    product_id: int
 
     class Meta:
         db_table = "sale_item"

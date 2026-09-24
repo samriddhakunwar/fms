@@ -64,7 +64,8 @@ class UserAdmin(BaseUserAdmin):
     # Extend the default fieldsets with our custom fields.
     # BaseUserAdmin.fieldsets already contains the standard Django sections;
     # we inject the project-specific section right after the first block.
-    fieldsets = BaseUserAdmin.fieldsets + (
+    fieldsets = (
+        *(BaseUserAdmin.fieldsets or ()),
         (
             # Section title shown in the form
             "Factory Management — Role & Contact",

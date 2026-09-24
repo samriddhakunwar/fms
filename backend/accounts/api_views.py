@@ -1,3 +1,5 @@
+from typing import cast
+
 from django.contrib.auth import authenticate, login, logout
 from django.middleware.csrf import get_token
 
@@ -9,6 +11,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from .models import User
 from .serializers import LoginSerializer, UserSerializer
 
 
@@ -67,10 +70,11 @@ def api_login(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    username = serializer.validated_data["username"]
-    password = serializer.validated_data["password"]
+    credentials = cast(dict, serializer.validated_data)
+    username = credentials["username"]
+    password = credentials["password"]
 
-    user = authenticate(request, username=username, password=password)
+    user = cast("User | None", authenticate(request, username=username, password=password))
 
     if user is None:
         return Response(
@@ -84,7 +88,7 @@ def api_login(request):
         {
             "message": "Login successful",
             "user": {
-                "id": user.id,
+                "id": user.pk,
                 "username": user.username,
                 "role": user.role,
             },

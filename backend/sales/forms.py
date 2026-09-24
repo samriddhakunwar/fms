@@ -26,7 +26,7 @@ class SaleItemAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         field = self.fields.get("product")
-        if field is None:
+        if not isinstance(field, forms.ModelChoiceField):
             return
 
         allowed = Q(is_active=True)

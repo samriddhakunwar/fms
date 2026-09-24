@@ -1,3 +1,8 @@
+# DRF ships no type stubs, so the checker sees test-client responses as plain
+# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
+# relations). Those attributes exist at runtime.
+# pyright: reportAttributeAccessIssue=false
+
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase

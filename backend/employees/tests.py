@@ -1,3 +1,8 @@
+# DRF ships no type stubs, so the checker sees test-client responses as plain
+# HttpResponse (no .data) and can't see Django's auto fields (.id, reverse
+# relations). Those attributes exist at runtime.
+# pyright: reportAttributeAccessIssue=false
+
 from datetime import date
 from decimal import Decimal
 
@@ -183,6 +188,7 @@ class EmployeeApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.employee.refresh_from_db()
+        assert self.employee.user is not None
         self.assertEqual(self.employee.user.username, "jane_mgr")
         self.assertEqual(self.employee.user.role, User.Role.INVENTORY_MANAGER)
 

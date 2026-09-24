@@ -1,4 +1,8 @@
+from typing import Callable
+
 from django.db import models
+
+from accounts.models import User
 
 
 class Employee(models.Model):
@@ -10,7 +14,7 @@ class Employee(models.Model):
     """
 
     user = models.OneToOneField(
-        "accounts.User",
+        User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -69,6 +73,10 @@ class Employee(models.Model):
         default=Status.ACTIVE,
         verbose_name="Employment Status",
     )
+
+    # Added by Django at runtime; declared here for the type checker.
+    user_id: int | None
+    get_status_display: Callable[[], str]
 
     class Meta:
         db_table = "employee"

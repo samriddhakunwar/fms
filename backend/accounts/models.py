@@ -1,3 +1,5 @@
+from typing import Callable
+
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 
@@ -39,6 +41,9 @@ class User(AbstractUser):
         choices=Role.choices,
         default=Role.ADMIN,
     )
+
+    # Added by Django at runtime; declared here for the type checker.
+    get_role_display: Callable[[], str]
 
     class Meta:
         db_table = "user"

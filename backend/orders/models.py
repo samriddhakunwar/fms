@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Callable
 
 from django.db import models
 from django.utils import timezone
@@ -44,7 +45,7 @@ class Order(models.Model):
     total_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,
-        default=0,
+        default=Decimal("0"),
         verbose_name="Total Amount",
         help_text="Grand total of all line items on this order.",
     )
@@ -61,6 +62,10 @@ class Order(models.Model):
         blank=True,
         verbose_name="Notes",
     )
+
+    # Added by Django at runtime; declared here for the type checker.
+    items: "models.Manager[OrderItem]"
+    get_status_display: Callable[[], str]
 
     class Meta:
         db_table = "customer_order"

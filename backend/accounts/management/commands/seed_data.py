@@ -17,6 +17,7 @@ it uses get_or_create / exists() guards on each unique field.
 """
 
 from decimal import Decimal
+from typing import Any
 
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
@@ -198,7 +199,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.HTTP_INFO("\n── employees.Employee ──────────────────────"))
 
-        records = [
+        records: list[dict[str, Any]] = [
             dict(
                 full_name="Md. Rafiqul Islam",
                 email="rafiq@fms.local",

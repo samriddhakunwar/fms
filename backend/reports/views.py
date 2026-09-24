@@ -64,17 +64,16 @@ def sales_report(request):
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
     if start is None and end is None:
-        end = today
         start = today - timedelta(days=DEFAULT_WINDOW_DAYS - 1)
-    elif start is None:
+    if end is None:
+        end = today
+    if start is None:
         # Half-open range: fall back to the earliest sale on record, or the
         # end date itself when there are no sales at all.
         earliest = Sale.objects.order_by("sale_date").values_list(
             "sale_date", flat=True
         ).first()
         start = timezone.localtime(earliest).date() if earliest else end
-    elif end is None:
-        end = today
 
     if start > end:
         return Response(
