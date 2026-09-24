@@ -19,6 +19,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdminOrInventoryManager
+from fms.dates import day_range_filter
 from sales.models import Sale
 
 # A report spanning more days than this would render an unreadable axis and a
@@ -87,7 +88,7 @@ def sales_report(request):
         truncated = True
 
     sales = (
-        Sale.objects.filter(sale_date__date__gte=start, sale_date__date__lte=end)
+        Sale.objects.filter(**day_range_filter("sale_date", start, end))
         .prefetch_related("items__product")
         .order_by("sale_date")
     )

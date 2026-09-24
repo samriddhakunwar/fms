@@ -81,6 +81,16 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Customer name is required.")
         return value
 
+    def validate_status(self, value):
+        # FULFILLED is only ever set by the fulfil action, which also raises the
+        # invoice and moves the stock. Setting it by hand would leave an order
+        # marked fulfilled with no sale behind it.
+        if value == Order.Status.FULFILLED and getattr(self.instance, "status", None) != value:
+            raise serializers.ValidationError(
+                "An order becomes Fulfilled only through the fulfil action."
+            )
+        return value
+
     def validate_items_input(self, value):
         if not value:
             raise serializers.ValidationError("An order must include at least one item.")

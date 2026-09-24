@@ -167,8 +167,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # ---------------------------------------------------------------------------
 LANGUAGE_CODE = 'en-us'
 
-# Use UTC internally; convert to local time only at the presentation layer.
-TIME_ZONE = 'UTC'
+# The factory's local time zone. Datetimes are still stored in UTC (USE_TZ);
+# this decides what "today" means and where a day starts and ends for the
+# dashboard, the date filters and the sales report.
+TIME_ZONE = os.environ.get("TIME_ZONE", "Asia/Kathmandu")
 
 USE_I18N = True
 

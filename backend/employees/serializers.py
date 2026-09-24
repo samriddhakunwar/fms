@@ -43,6 +43,11 @@ class EmployeeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "username"]
 
+    def validate_email(self, value):
+        # "" and null both mean "no email"; store NULL so the unique index
+        # does not treat two employees without an email as duplicates.
+        return value or None
+
     def validate(self, attrs):
         username = attrs.get("login_username", "").strip()
         if not username:
@@ -83,7 +88,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             username=username,
             first_name=first_name,
             last_name=last_name,
-            email=validated_data.get("email", getattr(self.instance, "email", "")),
+            email=validated_data.get("email", getattr(self.instance, "email", "")) or "",
             phone_number=validated_data.get("phone", getattr(self.instance, "phone", "")),
             role=role,
         )

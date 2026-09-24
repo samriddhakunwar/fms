@@ -128,6 +128,18 @@ class UserManagementApiTests(APITestCase):
         self.assertNotIn("password", response.data)
 
 
+    def test_role_is_required_when_creating_a_user(self):
+        """Leaving out role must not fall back to the model default (Admin)."""
+        self.client.login(username="admin_user", password=self.password)
+        response = self.client.post(
+            reverse("user-list"),
+            {"username": "no_role", "password": "SecurePass123!"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("role", response.data)
+        self.assertFalse(User.objects.filter(username="no_role").exists())
+
+
 class AdminSelfLockoutTests(APITestCase):
     """
     User management is Admin-only, and an Admin cannot lock themselves out of

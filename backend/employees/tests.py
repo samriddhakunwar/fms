@@ -223,6 +223,40 @@ class EmployeeApiTests(APITestCase):
         self.assertIn("login_username", response.data)
 
 
+    def test_several_employees_can_have_no_email(self):
+        self.client.login(username="admin_user", password=self.password)
+        for name in ("No Email One", "No Email Two"):
+            response = self.client.post(
+                reverse("employee-list"),
+                {
+                    "full_name": name,
+                    "email": "",
+                    "designation": "Helper",
+                    "joining_date": "2024-01-01",
+                    "salary": "15000.00",
+                },
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertIsNone(response.data["email"])
+        self.assertEqual(Employee.objects.filter(email__isnull=True).count(), 2)
+
+    def test_new_login_for_employee_without_email(self):
+        self.client.login(username="admin_user", password=self.password)
+        response = self.client.post(
+            reverse("employee-list"),
+            {
+                "full_name": "Ram Thapa",
+                "designation": "Helper",
+                "joining_date": "2024-01-01",
+                "salary": "15000.00",
+                "login_username": "ram",
+                "login_password": "SecurePass123!",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.get(username="ram").email, "")
+
+
 class EmployeeSelfProfileTests(APITestCase):
     """
     Staff see their own HR record and nobody else's. The record is resolved

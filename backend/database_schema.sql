@@ -150,7 +150,7 @@ CREATE TABLE `django_admin_log` (
 CREATE TABLE `employee` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `full_name` varchar(255) NOT NULL,
-  `email` varchar(254) NOT NULL,
+  `email` varchar(254) DEFAULT NULL,
   `phone` varchar(20) NOT NULL,
   `address` longtext NOT NULL,
   `designation` varchar(100) NOT NULL,

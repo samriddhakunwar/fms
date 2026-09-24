@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdminOrInventoryManagerReadOnly
+from fms.dates import day_range_filter, parse_day_param
 
 from .models import Sale
 from .serializers import SaleSerializer
@@ -33,23 +34,24 @@ class SaleViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        date = self.request.query_params.get("date")
-        start_date = self.request.query_params.get("start_date")
-        end_date = self.request.query_params.get("end_date")
+        params = self.request.query_params
+        date = parse_day_param(params, "date")
+        start_date = parse_day_param(params, "start_date")
+        end_date = parse_day_param(params, "end_date")
 
         if date:
-            queryset = queryset.filter(sale_date__date=date)
-        if start_date:
-            queryset = queryset.filter(sale_date__date__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(sale_date__date__lte=end_date)
+            queryset = queryset.filter(**day_range_filter("sale_date", date, date))
+        if start_date or end_date:
+            queryset = queryset.filter(
+                **day_range_filter("sale_date", start_date, end_date)
+            )
 
         return queryset
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
         today = timezone.localdate()
-        todays_sales = Sale.objects.filter(sale_date__date=today)
+        todays_sales = Sale.objects.filter(**day_range_filter("sale_date", today, today))
         revenue = todays_sales.aggregate(total=Sum("total_amount"))["total"] or 0
         return Response(
             {

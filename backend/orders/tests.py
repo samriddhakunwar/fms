@@ -275,3 +275,47 @@ class OrderApiTests(APITestCase):
         self._login("admin_user")
         response = self.client.post(reverse("order-fulfil", args=[order.id]))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    def test_order_cannot_be_marked_fulfilled_by_hand(self):
+        """Only the fulfil action may set FULFILLED — it also raises the sale."""
+        self._login("admin_user")
+        response = self.client.post(
+            reverse("order-list"),
+            {
+                "customer_name": "Shyam Pvt. Ltd.",
+                "status": "FULFILLED",
+                "items_input": [{"product": self.chair.id, "quantity": 1}],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("status", response.data)
+
+        order = self._create_order()
+        response = self.client.patch(
+            reverse("order-detail", args=[order.id]),
+            {"status": "FULFILLED"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PENDING)
+        self.assertEqual(Sale.objects.count(), 0)
+
+    def test_deleting_the_invoice_reopens_the_order(self):
+        order = self._create_order(quantity=4)
+        self._login("admin_user")
+        sale_id = self.client.post(reverse("order-fulfil", args=[order.id])).data["id"]
+
+        response = self.client.delete(reverse("sale-detail", args=[sale_id]))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.CONFIRMED)
+        self.chair.refresh_from_db()
+        self.assertEqual(self.chair.quantity_in_stock, 50)
+
+        # Open again, so it can be fulfilled a second time.
+        response = self.client.post(reverse("order-fulfil", args=[order.id]))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

@@ -44,6 +44,10 @@ class UserManagementSerializer(serializers.ModelSerializer):
             "password",
         ]
         read_only_fields = ["id", "date_joined"]
+        # The model defaults role to ADMIN (so createsuperuser gets an Admin);
+        # through the API a role must be chosen explicitly, so a forgotten
+        # field can never hand out Admin rights.
+        extra_kwargs = {"role": {"required": True}}
 
     def validate_password(self, value):
         """Runs Django's configured password validators, not just a length check."""

@@ -31,9 +31,12 @@ class Employee(models.Model):
         max_length=255,
         verbose_name="Full Name",
     )
+    # Optional but unique. A missing email is stored as NULL rather than ""
+    # because the unique index allows many NULLs but only one empty string.
     email = models.EmailField(
         unique=True,
         blank=True,
+        null=True,
         verbose_name="Email Address",
     )
     phone = models.CharField(
@@ -72,6 +75,11 @@ class Employee(models.Model):
         verbose_name = "Employee"
         verbose_name_plural = "Employees"
         ordering = ["full_name"]
+
+    def save(self, *args, **kwargs):
+        if not self.email:
+            self.email = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.full_name} — {self.designation} ({self.get_status_display()})"

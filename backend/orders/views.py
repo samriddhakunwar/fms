@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdmin, IsAdminOrInventoryManagerNoUpdate
+from fms.dates import day_range_filter, parse_day_param
 from sales.models import Sale, SaleItem
 from sales.serializers import SaleSerializer, generate_invoice_number
 
@@ -38,10 +39,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         status_param = params.get("status")
         if status_param:
             queryset = queryset.filter(status=status_param.upper())
-        if params.get("start_date"):
-            queryset = queryset.filter(order_date__date__gte=params["start_date"])
-        if params.get("end_date"):
-            queryset = queryset.filter(order_date__date__lte=params["end_date"])
+        start_date = parse_day_param(params, "start_date")
+        end_date = parse_day_param(params, "end_date")
+        if start_date or end_date:
+            queryset = queryset.filter(
+                **day_range_filter("order_date", start_date, end_date)
+            )
 
         return queryset
 

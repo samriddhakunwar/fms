@@ -1,6 +1,9 @@
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
+from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -296,3 +299,28 @@ class SaleApiTests(APITestCase):
         self.client.login(username="employee_user", password=self.password)
         response = self.client.get(reverse("sale-list"))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    @override_settings(TIME_ZONE="Asia/Kathmandu")
+    def test_today_follows_local_time_not_utc(self):
+        """00:30 local time is still the previous day in UTC; it must count as today."""
+        self._login_admin()
+        sale_id = self._record_sale()
+        today = timezone.localdate()
+        early_morning = timezone.make_aware(datetime.combine(today, time(0, 30)))
+        Sale.objects.filter(pk=sale_id).update(sale_date=early_morning)
+
+        response = self.client.get(reverse("sale-summary"))
+        self.assertEqual(response.data["todays_sales"], 1)
+
+        response = self.client.get(reverse("sale-list"), {"date": today.isoformat()})
+        self.assertEqual(len(response.data), 1)
+
+        yesterday = (today - timedelta(days=1)).isoformat()
+        response = self.client.get(reverse("sale-list"), {"date": yesterday})
+        self.assertEqual(len(response.data), 0)
+
+    def test_malformed_date_filter_is_rejected(self):
+        self._login_admin()
+        response = self.client.get(reverse("sale-list"), {"date": "23-09-2026"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

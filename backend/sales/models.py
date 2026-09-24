@@ -1,5 +1,5 @@
 from django.db import models, transaction
-from django.db.models.signals import pre_delete
+from django.db.models.signals import post_delete, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -206,3 +206,21 @@ def restore_stock_on_saleitem_delete(sender, instance, **kwargs):
         product = Product.objects.select_for_update().get(pk=instance.product_id)
         product.quantity_in_stock += instance.quantity
         product.save(update_fields=["quantity_in_stock", "updated_at"])
+
+
+@receiver(post_delete, sender=Sale)
+def reopen_order_on_sale_delete(sender, instance, **kwargs):
+    """
+    Deleting the invoice behind a fulfilled order puts that order back to
+    Confirmed. The invoice's line items have already returned their stock (see
+    above), so the order is open again: it can be corrected, fulfilled again
+    or deleted, instead of being stuck as "Fulfilled" with no invoice.
+    """
+    if instance.order_id is None:
+        return
+
+    from orders.models import Order
+
+    Order.objects.filter(pk=instance.order_id, status=Order.Status.FULFILLED).update(
+        status=Order.Status.CONFIRMED
+    )
