@@ -5,13 +5,15 @@
 -- index-for-index, constraint-for-constraint against a fresh migrate run.
 --
 -- Table names are the readable ones set via Meta.db_table / db_table on the
--- M2M fields (customer_order, customer_order_item, employee, product,
--- salary_payment, sale, sale_item, user, user_group, user_permission).
+-- M2M fields (admin, customer_order, customer_order_item, manager, product,
+-- sale, sale_item, staff, user, user_group, user_permission).
 -- Django's own auth_*/django_* tables keep their framework names.
 --
 -- Orders and sales are separate tables on purpose: an order records what the
 -- customer asked for and moves no stock, and `sale`.`order_id` points back at
 -- the order an invoice was raised from (NULL for a direct sale).
+-- `customer_order`.`created_by_id` is the Admin/Manager account that
+-- recorded the order (NULL for orders from before it was tracked).
 --
 -- Run with:
 --   mysql -u root -p < database_schema.sql
@@ -144,13 +146,38 @@ CREATE TABLE `django_admin_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- -------------------------------------------------------------------------
--- employees app
+-- Role tables. `user` above is the single login table (one password, one
+-- session login for everyone); each account also has exactly one record in
+-- the table for its role. Admin and Manager rows are created automatically
+-- with the account. `staff` is the employee/HR table (formerly `employee`,
+-- renamed in place by employees/0005 so ids were kept); its user_id is
+-- optional because some staff have no login, and only STAFF accounts may be
+-- linked. The FK keeps its original `employee_` name from before the rename,
+-- which is also what a fresh migrate produces.
 -- -------------------------------------------------------------------------
 
-CREATE TABLE `employee` (
+CREATE TABLE `admin` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `user_id` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  CONSTRAINT `admin_user_id_8a7d8779_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `manager` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `user_id` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  CONSTRAINT `manager_user_id_03d26107_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `staff` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `full_name` varchar(255) NOT NULL,
-  `email` varchar(254) NOT NULL,
+  `email` varchar(254) DEFAULT NULL,
   `phone` varchar(20) NOT NULL,
   `address` longtext NOT NULL,
   `designation` varchar(100) NOT NULL,
@@ -198,8 +225,11 @@ CREATE TABLE `customer_order` (
   `order_date` datetime(6) NOT NULL,
   `expected_delivery_date` date DEFAULT NULL,
   `notes` longtext NOT NULL,
+  `created_by_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `order_number` (`order_number`)
+  UNIQUE KEY `order_number` (`order_number`),
+  KEY `customer_order_created_by_id_450925d7_fk_user_id` (`created_by_id`),
+  CONSTRAINT `customer_order_created_by_id_450925d7_fk_user_id` FOREIGN KEY (`created_by_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `customer_order_item` (
@@ -215,22 +245,6 @@ CREATE TABLE `customer_order_item` (
   CONSTRAINT `customer_order_item_order_id_0d213d76_fk_customer_order_id` FOREIGN KEY (`order_id`) REFERENCES `customer_order` (`id`),
   CONSTRAINT `customer_order_item_product_id_a8dfa297_fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
   CONSTRAINT `customer_order_item_chk_1` CHECK ((`quantity` >= 0))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- -------------------------------------------------------------------------
--- salary app
--- -------------------------------------------------------------------------
-
-CREATE TABLE `salary_payment` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `amount` decimal(12,2) NOT NULL,
-  `payment_date` datetime(6) NOT NULL,
-  `payment_method` varchar(20) NOT NULL,
-  `remarks` longtext NOT NULL,
-  `employee_id` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` (`employee_id`),
-  CONSTRAINT `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employee` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- -------------------------------------------------------------------------

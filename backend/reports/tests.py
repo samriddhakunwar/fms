@@ -22,7 +22,7 @@ class SalesReportTests(APITestCase):
         self.manager = User.objects.create_user(
             username="manager_user",
             password=self.password,
-            role=User.Role.INVENTORY_MANAGER,
+            role=User.Role.MANAGER,
         )
         self.employee = User.objects.create_user(
             username="employee_user",

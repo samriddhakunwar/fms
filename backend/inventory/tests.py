@@ -20,7 +20,7 @@ class ProductApiTests(APITestCase):
         self.manager = User.objects.create_user(
             username="manager_user",
             password=self.password,
-            role=User.Role.INVENTORY_MANAGER,
+            role=User.Role.MANAGER,
         )
         self.employee = User.objects.create_user(
             username="employee_user",
@@ -80,7 +80,7 @@ class ProductApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Product.objects.count(), 1)
 
-    def test_inventory_manager_can_list_products(self):
+    def test_manager_can_list_products(self):
         self.client.login(username="manager_user", password=self.password)
         response = self.client.get(reverse("product-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -112,7 +112,7 @@ class ProductApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
 
-    def test_inventory_manager_can_update_product(self):
+    def test_manager_can_update_product(self):
         self.client.login(username="manager_user", password=self.password)
         response = self.client.patch(
             reverse("product-detail", args=[self.product.id]),

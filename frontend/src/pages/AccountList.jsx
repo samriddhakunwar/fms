@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import api, { getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
@@ -8,17 +9,19 @@ const EMPTY_FORM = {
   last_name: "",
   email: "",
   phone_number: "",
-  role: "STAFF",
   is_active: true,
 };
 
-const ROLE_LABELS = {
-  ADMIN: "Admin",
-  INVENTORY_MANAGER: "Manager",
-  STAFF: "Staff",
+// Admin and Manager accounts each live in their own table; the endpoint
+// decides which one, so the role is never sent from here.
+const KINDS = {
+  ADMIN: { endpoint: "/admins/", title: "Admins", noun: "Admin" },
+  MANAGER: { endpoint: "/managers/", title: "Managers", noun: "Manager" },
 };
 
-export default function UserList() {
+export default function AccountList({ kind }) {
+  const { endpoint, title, noun } = KINDS[kind];
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,7 +37,7 @@ export default function UserList() {
     setLoading(true);
     setError("");
     try {
-      const { data } = await api.get("/users/");
+      const { data } = await api.get(endpoint);
       setUsers(data);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -45,7 +48,8 @@ export default function UserList() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
 
   const openAddForm = () => {
     setEditingId(null);
@@ -63,7 +67,6 @@ export default function UserList() {
       last_name: user.last_name || "",
       email: user.email || "",
       phone_number: user.phone_number || "",
-      role: user.role,
       is_active: user.is_active,
     });
     setFormErrors({});
@@ -85,9 +88,9 @@ export default function UserList() {
 
     try {
       if (editingId) {
-        await api.patch(`/users/${editingId}/`, payload);
+        await api.patch(`${endpoint}${editingId}/`, payload);
       } else {
-        await api.post("/users/", payload);
+        await api.post(endpoint, payload);
       }
       setShowForm(false);
       await loadUsers();
@@ -105,7 +108,7 @@ export default function UserList() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.delete(`/users/${deleteTarget.id}/`);
+      await api.delete(`${endpoint}${deleteTarget.id}/`);
       setDeleteTarget(null);
       await loadUsers();
     } catch (err) {
@@ -117,9 +120,9 @@ export default function UserList() {
   return (
     <>
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h2 className="mb-0">Users</h2>
+        <h2 className="mb-0">{title}</h2>
         <button className="btn btn-primary" onClick={openAddForm}>
-          + Add User
+          + Add {noun}
         </button>
       </div>
 
@@ -136,7 +139,7 @@ export default function UserList() {
               <th>Username</th>
               <th>Full Name</th>
               <th>Email</th>
-              <th>Role</th>
+              <th>Phone</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -151,7 +154,7 @@ export default function UserList() {
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-4 text-muted">
-                  No users found.
+                  No {title.toLowerCase()} found.
                 </td>
               </tr>
             ) : (
@@ -162,7 +165,7 @@ export default function UserList() {
                     {user.first_name} {user.last_name}
                   </td>
                   <td>{user.email || "—"}</td>
-                  <td>{ROLE_LABELS[user.role] || user.role}</td>
+                  <td>{user.phone_number || "—"}</td>
                   <td>
                     <span className={`badge ${user.is_active ? "bg-success" : "bg-secondary"}`}>
                       {user.is_active ? "Active" : "Inactive"}
@@ -175,12 +178,14 @@ export default function UserList() {
                     >
                       Edit
                     </button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => setDeleteTarget(user)}
-                    >
-                      Delete
-                    </button>
+                    {user.id !== currentUser?.id && (
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => setDeleteTarget(user)}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -196,7 +201,9 @@ export default function UserList() {
               <div className="modal-content">
                 <form onSubmit={handleFormSubmit}>
                   <div className="modal-header">
-                    <h5 className="modal-title">{editingId ? "Edit User" : "Add User"}</h5>
+                    <h5 className="modal-title">
+                      {editingId ? `Edit ${noun}` : `Add ${noun}`}
+                    </h5>
                     <button
                       type="button"
                       className="btn-close"
@@ -280,30 +287,19 @@ export default function UserList() {
                       </div>
                     </div>
 
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Role</label>
-                        <select
-                          className="form-select"
-                          value={form.role}
-                          onChange={handleFormChange("role")}
-                        >
-                          <option value="ADMIN">Admin</option>
-                          <option value="INVENTORY_MANAGER">Manager</option>
-                          <option value="STAFF">Staff</option>
-                        </select>
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Status</label>
-                        <select
-                          className="form-select"
-                          value={String(form.is_active)}
-                          onChange={handleFormChange("is_active")}
-                        >
-                          <option value="true">Active</option>
-                          <option value="false">Inactive</option>
-                        </select>
-                      </div>
+                    <div className="mb-3">
+                      <label className="form-label">Status</label>
+                      <select
+                        className="form-select"
+                        value={String(form.is_active)}
+                        onChange={handleFormChange("is_active")}
+                      >
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                      </select>
+                      {formErrors.is_active && (
+                        <div className="text-danger small">{formErrors.is_active[0]}</div>
+                      )}
                     </div>
                   </div>
                   <div className="modal-footer">
@@ -332,7 +328,7 @@ export default function UserList() {
             <div className="modal-dialog" role="document">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">Delete User</h5>
+                  <h5 className="modal-title">Delete {noun}</h5>
                   <button
                     type="button"
                     className="btn-close"

@@ -2,7 +2,7 @@ from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdminOrInventoryManagerOrStaffReadOnly
+from accounts.permissions import IsAdminOrManagerOrStaffReadOnly
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -13,7 +13,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrInventoryManagerOrStaffReadOnly]
+    permission_classes = [IsAdminOrManagerOrStaffReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["product_name", "sku"]
     ordering_fields = ["product_name", "selling_price", "quantity_in_stock", "created_at"]

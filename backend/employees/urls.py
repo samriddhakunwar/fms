@@ -1,8 +1,8 @@
 from rest_framework.routers import SimpleRouter
 
-from .views import EmployeeViewSet
+from .views import StaffViewSet
 
 router = SimpleRouter()
-router.register("employees", EmployeeViewSet, basename="employee")
+router.register("staff", StaffViewSet, basename="staff")
 
 urlpatterns = router.urls

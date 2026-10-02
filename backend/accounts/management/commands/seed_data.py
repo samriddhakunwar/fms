@@ -26,7 +26,7 @@ class Command(BaseCommand):
 
         users     = self._seed_users()
         products  = self._seed_products()
-        self._seed_employees(users)
+        self._seed_staff(users)
         self._seed_orders(products)
         self._seed_sales(products)
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
                 first_name="Bob",
                 last_name="Hossain",
                 email="bob@fms.local",
-                role=User.Role.INVENTORY_MANAGER,
+                role=User.Role.MANAGER,
                 phone_number="01711-000002",
             ),
             dict(
@@ -61,7 +61,7 @@ class Command(BaseCommand):
                 first_name="Carol",
                 last_name="Akter",
                 email="carol@fms.local",
-                role=User.Role.INVENTORY_MANAGER,
+                role=User.Role.MANAGER,
                 phone_number="01711-000003",
             ),
             dict(
@@ -160,11 +160,11 @@ class Command(BaseCommand):
 
         return products
 
-    # employees.Employee
-    def _seed_employees(self, users):
-        from employees.models import Employee
+    # employees.Staff
+    def _seed_staff(self, users):
+        from employees.models import Staff
 
-        self.stdout.write(self.style.HTTP_INFO("\n── employees.Employee ──────────────────────"))
+        self.stdout.write(self.style.HTTP_INFO("\n── employees.Staff ─────────────────────────"))
 
         records: list[dict[str, Any]] = [
             dict(
@@ -175,7 +175,7 @@ class Command(BaseCommand):
                 designation="Machine Operator",
                 joining_date="2022-03-15",
                 salary=Decimal("28000.00"),
-                status=Employee.Status.ACTIVE,
+                status=Staff.Status.ACTIVE,
             ),
             dict(
                 full_name="Nasrin Khanam",
@@ -185,7 +185,7 @@ class Command(BaseCommand):
                 designation="Quality Inspector",
                 joining_date="2021-07-01",
                 salary=Decimal("32000.00"),
-                status=Employee.Status.ACTIVE,
+                status=Staff.Status.ACTIVE,
             ),
             dict(
                 full_name="Karim Bepari",
@@ -195,7 +195,7 @@ class Command(BaseCommand):
                 designation="Warehouse Supervisor",
                 joining_date="2020-01-10",
                 salary=Decimal("38000.00"),
-                status=Employee.Status.ACTIVE,
+                status=Staff.Status.ACTIVE,
             ),
             dict(
                 full_name="Ritu Rani Das",
@@ -205,7 +205,7 @@ class Command(BaseCommand):
                 designation="Production Technician",
                 joining_date="2023-05-20",
                 salary=Decimal("25000.00"),
-                status=Employee.Status.ACTIVE,
+                status=Staff.Status.ACTIVE,
             ),
             dict(
                 full_name="Sohel Mahmud",
@@ -215,7 +215,7 @@ class Command(BaseCommand):
                 designation="Maintenance Engineer",
                 joining_date="2019-11-03",
                 salary=Decimal("45000.00"),
-                status=Employee.Status.INACTIVE,
+                status=Staff.Status.INACTIVE,
             ),
         ]
 
@@ -226,14 +226,14 @@ class Command(BaseCommand):
         employees = []
         for data in records:
             email = data["email"]
-            employee, created = Employee.objects.get_or_create(email=email, defaults=data)
+            employee, created = Staff.objects.get_or_create(email=email, defaults=data)
             if not created and employee.user_id is None and data.get("user"):
                 employee.user = data["user"]
                 employee.save(update_fields=["user"])
             if created:
-                ok(f"Employee: {employee.full_name}  ({employee.designation})")
+                ok(f"Staff: {employee.full_name}  ({employee.designation})")
             else:
-                skip(f"Employee email {email}")
+                skip(f"Staff email {email}")
             employees.append(employee)
 
         return employees

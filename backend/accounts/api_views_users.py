@@ -3,35 +3,73 @@ from rest_framework.exceptions import ValidationError
 
 from .models import User
 from .permissions import IsAdmin
-from .serializers import UserManagementSerializer
+from .serializers import (
+    AdminAccountSerializer,
+    ManagerAccountSerializer,
+    UserSerializer,
+)
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Every login account, read-only. Accounts are created and changed through
+    /admins/, /managers/ and /staff/ so each one lands in the right table.
+    """
+
     queryset = User.objects.all()
-    serializer_class = UserManagementSerializer
+    serializer_class = UserSerializer
     permission_classes = [IsAdmin]
     filter_backends = [filters.SearchFilter]
     search_fields = ["username", "first_name", "last_name", "email"]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        role = self.request.query_params.get("role")
+        if role:
+            queryset = queryset.filter(role=role.upper())
+        return queryset
+
+
+class RoleAccountViewSet(viewsets.ModelViewSet):
+    role_value: str = ""
+    profile_attr: str = ""
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["username", "first_name", "last_name", "email"]
+
+    def get_queryset(self):
+        return User.objects.filter(role=self.role_value).select_related(
+            self.profile_attr
+        )
+
+    def perform_destroy(self, instance):
+        # Deleting the login cascades to its Admin/Manager row.
+        instance.delete()
+
+
+class AdminAccountViewSet(RoleAccountViewSet):
+    """Admin accounts (`user` + `admin`)."""
+
+    role_value = User.Role.ADMIN
+    profile_attr = "admin_profile"
+    serializer_class = AdminAccountSerializer
+
     def perform_update(self, serializer):
         instance = serializer.instance
-
-        if instance == self.request.user:
-            role = serializer.validated_data.get("role", instance.role)
-            is_active = serializer.validated_data.get("is_active", instance.is_active)
-
-            if role != User.Role.ADMIN:
-                raise ValidationError(
-                    {"role": "You cannot change your own account out of the Admin role."}
-                )
-            if not is_active:
-                raise ValidationError(
-                    {"is_active": "You cannot deactivate your own account."}
-                )
-
+        is_active = serializer.validated_data.get("is_active", instance.is_active)
+        if instance == self.request.user and not is_active:
+            raise ValidationError({"is_active": "You cannot deactivate your own account."})
         serializer.save()
 
     def perform_destroy(self, instance):
         if instance == self.request.user:
             raise ValidationError({"detail": "You cannot delete your own account."})
-        instance.delete()
+        super().perform_destroy(instance)
+
+
+class ManagerAccountViewSet(RoleAccountViewSet):
+    """Manager accounts (`user` + `manager`)."""
+
+    role_value = User.Role.MANAGER
+    profile_attr = "manager_profile"
+    serializer_class = ManagerAccountSerializer

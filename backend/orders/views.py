@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdmin, IsAdminOrInventoryManagerNoUpdate
+from accounts.permissions import IsAdmin, IsAdminOrManagerNoUpdate
 from fms.dates import day_range_filter, parse_day_param
 from sales.models import Sale, SaleItem
 from sales.serializers import SaleSerializer, generate_invoice_number
@@ -16,9 +16,11 @@ from .serializers import OrderSerializer
 class OrderViewSet(viewsets.ModelViewSet):
     """Customer orders."""
 
-    queryset = Order.objects.prefetch_related("items__product").select_related("sale")
+    queryset = Order.objects.prefetch_related("items__product").select_related(
+        "sale", "created_by"
+    )
     serializer_class = OrderSerializer
-    permission_classes = [IsAdminOrInventoryManagerNoUpdate]
+    permission_classes = [IsAdminOrManagerNoUpdate]
     filter_backends = [filters.SearchFilter]
     search_fields = ["order_number", "customer_name"]
 
@@ -37,6 +39,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
 
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
     def perform_destroy(self, instance):
         if instance.status == Order.Status.FULFILLED:

@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Callable
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -48,6 +49,20 @@ class Order(models.Model):
     notes = models.TextField(
         blank=True,
         verbose_name="Notes",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="orders_created",
+        limit_choices_to={"role__in": ["ADMIN", "MANAGER"]},
+        verbose_name="Created By",
+        help_text=(
+            "The Admin or Manager account that recorded this order. Empty for "
+            "orders created before this was tracked, or if that account was "
+            "later deleted."
+        ),
     )
 
     items: "models.Manager[OrderItem]"

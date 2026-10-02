@@ -1,20 +1,19 @@
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdminOrInventoryManagerReadOnly
+from accounts.permissions import IsAdminOrManagerReadOnly, IsStaff
 
-from .models import Employee
-from .serializers import EmployeeSerializer
+from .models import Staff
+from .serializers import StaffSerializer
 
 
-class EmployeeViewSet(viewsets.ModelViewSet):
-    """Employee HR records."""
+class StaffViewSet(viewsets.ModelViewSet):
+    """Staff HR records. Admin manages them; Manager may only view."""
 
-    queryset = Employee.objects.select_related("user").all()
-    serializer_class = EmployeeSerializer
-    permission_classes = [IsAdminOrInventoryManagerReadOnly]
+    queryset = Staff.objects.select_related("user").all()
+    serializer_class = StaffSerializer
+    permission_classes = [IsAdminOrManagerReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ["full_name"]
 
@@ -30,28 +29,27 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
-        return Response({"total_employees": Employee.objects.count()})
+        return Response({"total_staff": Staff.objects.count()})
 
     @action(
         detail=False,
         methods=["get"],
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsStaff],
         url_path="me",
     )
     def me(self, request):
-        employee = Employee.objects.select_related("user").filter(
-            user=request.user
-        ).first()
+        # Always looked up from the session user, never from an id in the URL.
+        staff = Staff.objects.select_related("user").filter(user=request.user).first()
 
-        if employee is None:
+        if staff is None:
             return Response(
                 {
                     "detail": (
-                        "No employee record is linked to your account yet. "
+                        "No staff record is linked to your account yet. "
                         "Ask an administrator to link one."
                     )
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        return Response(self.get_serializer(employee).data)
+        return Response(self.get_serializer(staff).data)

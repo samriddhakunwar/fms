@@ -22,6 +22,7 @@ class OrderAdmin(admin.ModelAdmin):
         "total_amount",
         "order_date",
         "expected_delivery_date",
+        "created_by",
     )
     list_display_links = ("order_number",)
     list_filter = ("status", "order_date")
@@ -29,7 +30,7 @@ class OrderAdmin(admin.ModelAdmin):
     ordering = ("-order_date",)
     date_hierarchy = "order_date"
 
-    readonly_fields = ("order_number", "order_date", "total_amount")
+    readonly_fields = ("order_number", "order_date", "total_amount", "created_by")
 
     fieldsets = (
         (
@@ -42,6 +43,7 @@ class OrderAdmin(admin.ModelAdmin):
                     "order_date",
                     "expected_delivery_date",
                     "notes",
+                    "created_by",
                 )
             },
         ),
@@ -55,6 +57,11 @@ class OrderAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    def save_model(self, request, obj, form, change):
+        if not change and request.user.role in ("ADMIN", "MANAGER"):
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)

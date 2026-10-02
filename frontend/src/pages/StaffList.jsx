@@ -14,22 +14,15 @@ const EMPTY_FORM = {
   status: "ACTIVE",
   login_username: "",
   login_password: "",
-  login_role: "STAFF",
 };
 
 const NEW_LOGIN = "__new__";
 
-const ROLE_LABELS = {
-  ADMIN: "Admin",
-  INVENTORY_MANAGER: "Manager",
-  STAFF: "Staff",
-};
-
-export default function EmployeeList() {
+export default function StaffList() {
   const { role } = useAuth();
   const canManage = role === "ADMIN";
 
-  const [employees, setEmployees] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -43,12 +36,12 @@ export default function EmployeeList() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const loadEmployees = async (params = {}) => {
+  const loadStaff = async (params = {}) => {
     setLoading(true);
     setError("");
     try {
-      const { data } = await api.get("/employees/", { params });
-      setEmployees(data);
+      const { data } = await api.get("/staff/", { params });
+      setStaff(data);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -58,7 +51,8 @@ export default function EmployeeList() {
 
   const loadAccounts = async () => {
     try {
-      const { data } = await api.get("/users/");
+      // Only Staff logins can be linked to a staff record.
+      const { data } = await api.get("/users/", { params: { role: "STAFF" } });
       setAccounts(data);
     } catch {
       // Link dropdown just stays empty.
@@ -66,7 +60,7 @@ export default function EmployeeList() {
   };
 
   useEffect(() => {
-    loadEmployees();
+    loadStaff();
     if (canManage) loadAccounts();
   }, [canManage]);
 
@@ -75,7 +69,7 @@ export default function EmployeeList() {
     const params = {};
     if (search) params.search = search;
     if (statusFilter) params.status = statusFilter;
-    loadEmployees(params);
+    loadStaff(params);
   };
 
   const openAddForm = () => {
@@ -85,19 +79,19 @@ export default function EmployeeList() {
     setShowForm(true);
   };
 
-  const openEditForm = (employee) => {
-    setEditingId(employee.id);
+  const openEditForm = (member) => {
+    setEditingId(member.id);
     setForm({
       ...EMPTY_FORM,
-      user: employee.user ?? "",
-      full_name: employee.full_name,
-      email: employee.email || "",
-      phone: employee.phone || "",
-      address: employee.address || "",
-      designation: employee.designation,
-      joining_date: employee.joining_date,
-      salary: employee.salary,
-      status: employee.status,
+      user: member.user ?? "",
+      full_name: member.full_name,
+      email: member.email || "",
+      phone: member.phone || "",
+      address: member.address || "",
+      designation: member.designation,
+      joining_date: member.joining_date,
+      salary: member.salary,
+      status: member.status,
     });
     setFormErrors({});
     setShowForm(true);
@@ -111,19 +105,19 @@ export default function EmployeeList() {
     event.preventDefault();
     setSaving(true);
     setFormErrors({});
-    const { login_username, login_password, login_role, ...record } = form;
+    const { login_username, login_password, ...record } = form;
     const payload =
       form.user === NEW_LOGIN
-        ? { ...record, user: null, login_username, login_password, login_role }
+        ? { ...record, user: null, login_username, login_password }
         : { ...record, user: form.user === "" ? null : form.user };
     try {
       if (editingId) {
-        await api.put(`/employees/${editingId}/`, payload);
+        await api.put(`/staff/${editingId}/`, payload);
       } else {
-        await api.post("/employees/", payload);
+        await api.post("/staff/", payload);
       }
       setShowForm(false);
-      await loadEmployees();
+      await loadStaff();
       if (form.user === NEW_LOGIN) loadAccounts();
     } catch (err) {
       if (err.response?.status === 400 && err.response.data) {
@@ -139,9 +133,9 @@ export default function EmployeeList() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.delete(`/employees/${deleteTarget.id}/`);
+      await api.delete(`/staff/${deleteTarget.id}/`);
       setDeleteTarget(null);
-      await loadEmployees();
+      await loadStaff();
     } catch (err) {
       setError(getErrorMessage(err));
       setDeleteTarget(null);
@@ -151,10 +145,10 @@ export default function EmployeeList() {
   return (
     <>
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h2 className="mb-0">{canManage ? "Employees" : "Staff Records"}</h2>
+        <h2 className="mb-0">Staff</h2>
         {canManage && (
           <button className="btn btn-primary" onClick={openAddForm}>
-            + Add Employee
+            + Add Staff
           </button>
         )}
       </div>
@@ -213,43 +207,43 @@ export default function EmployeeList() {
                   Loading…
                 </td>
               </tr>
-            ) : employees.length === 0 ? (
+            ) : staff.length === 0 ? (
               <tr>
                 <td
                   colSpan={canManage ? 7 : 6}
                   className="text-center py-4 text-muted"
                 >
-                  No employees found.
+                  No staff found.
                 </td>
               </tr>
             ) : (
-              employees.map((employee) => (
-                <tr key={employee.id}>
-                  <td>{employee.full_name}</td>
-                  <td>{employee.designation}</td>
-                  <td>{employee.email || "—"}</td>
-                  <td>{employee.phone || "—"}</td>
-                  <td>{Number(employee.salary).toFixed(2)}</td>
+              staff.map((member) => (
+                <tr key={member.id}>
+                  <td>{member.full_name}</td>
+                  <td>{member.designation}</td>
+                  <td>{member.email || "—"}</td>
+                  <td>{member.phone || "—"}</td>
+                  <td>{Number(member.salary).toFixed(2)}</td>
                   <td>
                     <span
                       className={`badge ${
-                        employee.status === "ACTIVE" ? "bg-success" : "bg-secondary"
+                        member.status === "ACTIVE" ? "bg-success" : "bg-secondary"
                       }`}
                     >
-                      {employee.status === "ACTIVE" ? "Active" : "Inactive"}
+                      {member.status === "ACTIVE" ? "Active" : "Inactive"}
                     </span>
                   </td>
                   {canManage && (
                     <td className="text-nowrap">
                       <button
                         className="btn btn-sm btn-outline-primary me-2"
-                        onClick={() => openEditForm(employee)}
+                        onClick={() => openEditForm(member)}
                       >
                         Edit
                       </button>
                       <button
                         className="btn btn-sm btn-outline-danger"
-                        onClick={() => setDeleteTarget(employee)}
+                        onClick={() => setDeleteTarget(member)}
                       >
                         Delete
                       </button>
@@ -270,7 +264,7 @@ export default function EmployeeList() {
                 <form onSubmit={handleFormSubmit}>
                   <div className="modal-header">
                     <h5 className="modal-title">
-                      {editingId ? "Edit Employee" : "Add Employee"}
+                      {editingId ? "Edit Staff" : "Add Staff"}
                     </h5>
                     <button
                       type="button"
@@ -396,7 +390,7 @@ export default function EmployeeList() {
                         {accounts
                           .filter(
                             (account) =>
-                              !employees.some(
+                              !staff.some(
                                 (other) => other.user === account.id && other.id !== editingId
                               )
                           )
@@ -406,13 +400,13 @@ export default function EmployeeList() {
                               {account.first_name || account.last_name
                                 ? ` — ${account.first_name} ${account.last_name}`.trimEnd()
                                 : ""}
-                              {` (${ROLE_LABELS[account.role] || account.role})`}
                             </option>
                           ))}
                       </select>
                       <div className="form-text">
-                        Linking a login lets that person see this record on
-                        their own profile page. Optional.
+                        Only Staff logins can be linked. Linking one lets that
+                        person see this record on their own profile page.
+                        Optional.
                       </div>
                       {formErrors.user && (
                         <div className="text-danger small">{formErrors.user[0]}</div>
@@ -421,36 +415,20 @@ export default function EmployeeList() {
 
                     {form.user === NEW_LOGIN && (
                       <div className="border rounded p-3 mb-3">
-                        <div className="row">
-                          <div className="col-6 mb-3">
-                            <label className="form-label">Username</label>
-                            <input
-                              className="form-control"
-                              value={form.login_username}
-                              onChange={handleFormChange("login_username")}
-                              autoComplete="off"
-                              required
-                            />
-                            {formErrors.login_username && (
-                              <div className="text-danger small">
-                                {formErrors.login_username[0]}
-                              </div>
-                            )}
-                          </div>
-                          <div className="col-6 mb-3">
-                            <label className="form-label">Role</label>
-                            <select
-                              className="form-select"
-                              value={form.login_role}
-                              onChange={handleFormChange("login_role")}
-                            >
-                              {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                                <option value={value} key={value}>
-                                  {label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                        <div className="mb-3">
+                          <label className="form-label">Username</label>
+                          <input
+                            className="form-control"
+                            value={form.login_username}
+                            onChange={handleFormChange("login_username")}
+                            autoComplete="off"
+                            required
+                          />
+                          {formErrors.login_username && (
+                            <div className="text-danger small">
+                              {formErrors.login_username[0]}
+                            </div>
+                          )}
                         </div>
                         <label className="form-label">Password</label>
                         <input
@@ -467,7 +445,8 @@ export default function EmployeeList() {
                           </div>
                         )}
                         <div className="form-text">
-                          Name, email and phone are copied from this record.
+                          Creates a Staff login. Name, email and phone are copied
+                          from this record.
                         </div>
                       </div>
                     )}
@@ -498,7 +477,7 @@ export default function EmployeeList() {
             <div className="modal-dialog" role="document">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">Delete Employee</h5>
+                  <h5 className="modal-title">Delete Staff</h5>
                   <button
                     type="button"
                     className="btn-close"

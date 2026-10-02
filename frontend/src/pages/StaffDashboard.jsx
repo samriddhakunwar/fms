@@ -6,7 +6,7 @@ import ChartCard from "../charts/ChartCard";
 import DonutChart from "../charts/DonutChart";
 import { stockStatusBreakdown } from "../charts/aggregate";
 
-export default function EmployeeDashboard() {
+export default function StaffDashboard() {
   const { user } = useAuth();
 
   const [stock, setStock] = useState([]);
@@ -30,7 +30,7 @@ export default function EmployeeDashboard() {
 
   return (
     <>
-      <h2 className="mb-4">Employee Dashboard</h2>
+      <h2 className="mb-4">Staff Dashboard</h2>
 
       <div className="row g-3">
         <div className="col-12 col-lg-6">

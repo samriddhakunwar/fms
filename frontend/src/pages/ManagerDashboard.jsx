@@ -6,7 +6,7 @@ import DonutChart from "../charts/DonutChart";
 import { RankedBarChart } from "../charts/TrendChart";
 import { stockStatusBreakdown, topProductsByStock } from "../charts/aggregate";
 
-export default function InventoryDashboard() {
+export default function ManagerDashboard() {
   const [stats, setStats] = useState({
     total_products: "—",
     low_stock_products: "—",

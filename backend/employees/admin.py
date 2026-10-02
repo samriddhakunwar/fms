@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.contrib.admin.options import IS_POPUP_VAR
 
-from .models import Employee
+from .models import Staff
 
 
-@admin.register(Employee)
-class EmployeeAdmin(admin.ModelAdmin):
-    """Admin interface for the Employee model."""
+@admin.register(Staff)
+class StaffAdmin(admin.ModelAdmin):
+    """Staff (employee) HR records. Admins and Managers are not listed here."""
 
     # List view
     list_display = (
@@ -30,7 +30,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "full_name",       # Search by employee name
+        "full_name",       # Search by staff name
         "email",           # Search by email address
         "designation",     # Search by job title
         "user__username",  # Search by the linked login account
@@ -38,7 +38,7 @@ class EmployeeAdmin(admin.ModelAdmin):
 
     raw_id_fields = ("user",)
 
-    actions = ("deactivate_employees", "reactivate_employees")
+    actions = ("deactivate_staff", "reactivate_staff")
 
     # Default sort: alphabetical by full name
     ordering = ("full_name",)
@@ -51,24 +51,24 @@ class EmployeeAdmin(admin.ModelAdmin):
         return False
 
     # Actions
-    @admin.action(description="Deactivate selected employees (soft delete)")
-    def deactivate_employees(self, request, queryset):
-        updated = queryset.update(status=Employee.Status.INACTIVE)
+    @admin.action(description="Deactivate selected staff (soft delete)")
+    def deactivate_staff(self, request, queryset):
+        updated = queryset.update(status=Staff.Status.INACTIVE)
         self.message_user(
             request,
-            f"{updated} employee(s) marked Inactive. Their record is kept.",
+            f"{updated} staff record(s) marked Inactive. Their record is kept.",
         )
 
-    @admin.action(description="Reactivate selected employees")
-    def reactivate_employees(self, request, queryset):
-        updated = queryset.update(status=Employee.Status.ACTIVE)
-        self.message_user(request, f"{updated} employee(s) marked Active.")
+    @admin.action(description="Reactivate selected staff")
+    def reactivate_staff(self, request, queryset):
+        updated = queryset.update(status=Staff.Status.ACTIVE)
+        self.message_user(request, f"{updated} staff record(s) marked Active.")
 
     # Querysets
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         if IS_POPUP_VAR in request.GET and "status__exact" not in request.GET:
-            queryset = queryset.filter(status=Employee.Status.ACTIVE)
+            queryset = queryset.filter(status=Staff.Status.ACTIVE)
         return queryset
 
     # Detail (add / change) view
@@ -89,8 +89,8 @@ class EmployeeAdmin(admin.ModelAdmin):
             {
                 "fields": ("user",),
                 "description": (
-                    "Link the employee's login account so they can see their "
-                    "own profile in the app. Optional."
+                    "Link the staff member's login account (Staff role only) so "
+                    "they can see their own profile in the app. Optional."
                 ),
             },
         ),

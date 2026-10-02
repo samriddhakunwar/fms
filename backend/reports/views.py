@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdminOrInventoryManager
+from accounts.permissions import IsAdminOrManager
 from fms.dates import day_range_filter
 from sales.models import Sale
 
@@ -29,7 +29,7 @@ def _money(value):
 
 
 @api_view(["GET"])
-@permission_classes([IsAdminOrInventoryManager])
+@permission_classes([IsAdminOrManager])
 def sales_report(request):
     """Sales report for a date range."""
     today = timezone.localdate()

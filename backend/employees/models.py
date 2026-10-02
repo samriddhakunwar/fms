@@ -1,24 +1,26 @@
 from typing import Callable
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from accounts.models import User
 
 
-class Employee(models.Model):
-    """Represents a factory employee."""
+class Staff(models.Model):
+    """A factory employee. Admins and Managers are never stored here."""
 
     user = models.OneToOneField(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="employee_profile",
+        related_name="staff_profile",
+        limit_choices_to={"role": User.Role.STAFF},
         verbose_name="Login Account",
         help_text=(
-            "The login account this HR record belongs to. Linking one lets the "
-            "employee see their own profile in the app; it is optional so "
-            "records can exist for staff who have no login."
+            "The Staff login account this HR record belongs to. Linking one lets "
+            "the staff member see their own profile in the app; it is optional "
+            "so records can exist for staff who have no login."
         ),
     )
 
@@ -52,13 +54,13 @@ class Employee(models.Model):
     )
     joining_date = models.DateField(
         verbose_name="Joining Date",
-        help_text="The date the employee started working at the factory.",
+        help_text="The date the staff member started working at the factory.",
     )
     salary = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         verbose_name="Base Salary",
-        help_text="Agreed monthly/periodic base salary for this employee.",
+        help_text="Agreed monthly/periodic base salary for this staff member.",
     )
     status = models.CharField(
         max_length=10,
@@ -71,10 +73,16 @@ class Employee(models.Model):
     get_status_display: Callable[[], str]
 
     class Meta:
-        db_table = "employee"
-        verbose_name = "Employee"
-        verbose_name_plural = "Employees"
+        db_table = "staff"
+        verbose_name = "Staff"
+        verbose_name_plural = "Staff"
         ordering = ["full_name"]
+
+    def clean(self):
+        if self.user_id and self.user.role != User.Role.STAFF:
+            raise ValidationError(
+                {"user": "Only a Staff account can be linked to a Staff record."}
+            )
 
     def save(self, *args, **kwargs):
         if not self.email:

@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const ROLE_LABELS = {
-  ADMIN: "Admin",
-  INVENTORY_MANAGER: "Manager",
-  STAFF: "Staff",
-};
+import { ROLE_LABELS } from "../routes/roleRoutes";
 
 export default function DashboardLayout({ title, navItems, children }) {
   const { user, logout } = useAuth();

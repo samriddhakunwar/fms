@@ -4,7 +4,7 @@ from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdminOrInventoryManagerReadOnly
+from accounts.permissions import IsAdminOrManagerReadOnly
 from fms.dates import day_range_filter, parse_day_param
 
 from .models import Sale
@@ -14,7 +14,7 @@ from .serializers import SaleSerializer
 class SaleViewSet(viewsets.ModelViewSet):
     queryset = Sale.objects.prefetch_related("items__product").all()
     serializer_class = SaleSerializer
-    permission_classes = [IsAdminOrInventoryManagerReadOnly]
+    permission_classes = [IsAdminOrManagerReadOnly]
     http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
     filter_backends = [filters.SearchFilter]
     search_fields = ["invoice_number", "sold_to"]

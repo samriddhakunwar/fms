@@ -22,7 +22,7 @@ class OrderApiTests(APITestCase):
         self.manager = User.objects.create_user(
             username="manager_user",
             password=self.password,
-            role=User.Role.INVENTORY_MANAGER,
+            role=User.Role.MANAGER,
         )
         self.employee = User.objects.create_user(
             username="employee_user",
@@ -92,6 +92,37 @@ class OrderApiTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_order_records_the_admin_or_manager_who_created_it(self):
+        for username, account in (("admin_user", self.admin), ("manager_user", self.manager)):
+            self._login(username)
+            response = self.client.post(
+                reverse("order-list"),
+                {
+                    "customer_name": "Ram Traders",
+                    "items_input": [{"product": self.chair.id, "quantity": 1}],
+                    "created_by": self.employee.id,  # read-only; ignored
+                },
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.data["created_by"], account.id)
+            self.assertEqual(response.data["created_by_username"], username)
+            self.assertEqual(Order.objects.get(pk=response.data["id"]).created_by, account)
+
+    def test_deleting_the_creator_keeps_the_order(self):
+        self._login("manager_user")
+        response = self.client.post(
+            reverse("order-list"),
+            {
+                "customer_name": "Ram Traders",
+                "items_input": [{"product": self.chair.id, "quantity": 1}],
+            },
+            format="json",
+        )
+        self.manager.delete()
+        order = Order.objects.get(pk=response.data["id"])
+        self.assertIsNone(order.created_by)
 
     def test_employee_cannot_create_order(self):
         self._login("employee_user")

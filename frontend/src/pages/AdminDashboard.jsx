@@ -10,7 +10,7 @@ import {
   stockStatusBreakdown,
 } from "../charts/aggregate";
 
-const EMPLOYEE_STATUS_LABELS = {
+const STAFF_STATUS_LABELS = {
   ACTIVE: "Active",
   INACTIVE: "Inactive",
 };
@@ -22,7 +22,7 @@ const moneyTick = (value) =>
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
-    total_employees: "—",
+    total_staff: "—",
     total_products: "—",
     low_stock_products: "—",
     todays_sales: "—",
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
 
   const [charts, setCharts] = useState({
     stock: [],
-    employees: [],
+    staff: [],
     sales: [],
   });
   const [chartsLoading, setChartsLoading] = useState(true);
@@ -40,13 +40,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [employeesRes, productsRes, salesRes] = await Promise.all([
-          api.get("/employees/summary/"),
+        const [staffRes, productsRes, salesRes] = await Promise.all([
+          api.get("/staff/summary/"),
           api.get("/products/summary/"),
           api.get("/sales/summary/"),
         ]);
         setStats({
-          total_employees: employeesRes.data.total_employees,
+          total_staff: staffRes.data.total_staff,
           total_products: productsRes.data.total_products,
           low_stock_products: productsRes.data.low_stock_products,
           todays_sales: salesRes.data.todays_sales,
@@ -63,14 +63,14 @@ export default function AdminDashboard() {
       setChartsLoading(true);
       setChartsError("");
       try {
-        const [products, employees, sales] = await Promise.all([
+        const [products, staff, sales] = await Promise.all([
           api.get("/products/"),
-          api.get("/employees/"),
+          api.get("/staff/"),
           api.get("/sales/"),
         ]);
         setCharts({
           stock: stockStatusBreakdown(products.data),
-          employees: countByField(employees.data, "status", EMPLOYEE_STATUS_LABELS),
+          staff: countByField(staff.data, "status", STAFF_STATUS_LABELS),
           sales: dailySalesSeries(sales.data, 7),
         });
       } catch {
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
   }, []);
 
   const cards = [
-    { label: "Total Employees", value: stats.total_employees },
+    { label: "Total Staff", value: stats.total_staff },
     { label: "Total Products", value: stats.total_products },
     { label: "Low Stock Products", value: stats.low_stock_products },
     { label: "Today's Sales", value: stats.todays_sales },
@@ -123,12 +123,12 @@ export default function AdminDashboard() {
 
         <div className="col-12 col-lg-6">
           <ChartCard
-            title="Employees"
+            title="Staff"
             subtitle="Active vs inactive"
             {...chartState}
-            empty={charts.employees.length === 0}
+            empty={charts.staff.length === 0}
           >
-            <DonutChart data={charts.employees} />
+            <DonutChart data={charts.staff} />
           </ChartCard>
         </div>
       </div>

@@ -45,6 +45,9 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     items_input = OrderItemInputSerializer(many=True, write_only=True, required=False)
     invoice_number = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(
+        source="created_by.username", read_only=True, default=None
+    )
 
     class Meta:
         model = Order
@@ -60,6 +63,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "items",
             "items_input",
             "invoice_number",
+            "created_by",
+            "created_by_username",
         ]
         read_only_fields = [
             "id",
@@ -67,6 +72,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_amount",
             "order_date",
             "items",
+            "created_by",
         ]
 
     def get_invoice_number(self, obj):

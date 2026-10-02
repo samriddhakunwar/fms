@@ -261,7 +261,7 @@ class SaleApiTests(APITestCase):
         manager = User.objects.create_user(
             username="manager_user",
             password=self.password,
-            role=User.Role.INVENTORY_MANAGER,
+            role=User.Role.MANAGER,
         )
         self.client.login(username=manager.username, password=self.password)
 

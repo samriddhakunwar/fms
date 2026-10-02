@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import api, { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-export default function EmployeeProfile() {
+export default function StaffProfile() {
   const { user } = useAuth();
 
   const [record, setRecord] = useState(null);
@@ -13,7 +13,7 @@ export default function EmployeeProfile() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/employees/me/");
+        const { data } = await api.get("/staff/me/");
         setRecord(data);
       } catch (err) {
         setError(getErrorMessage(err));

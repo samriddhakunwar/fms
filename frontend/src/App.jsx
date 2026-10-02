@@ -5,19 +5,19 @@ import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 import AdminLayout from "./layouts/AdminLayout";
-import EmployeeLayout from "./layouts/EmployeeLayout";
-import InventoryManagerLayout from "./layouts/InventoryManagerLayout";
+import ManagerLayout from "./layouts/ManagerLayout";
+import StaffLayout from "./layouts/StaffLayout";
 
+import AccountList from "./pages/AccountList";
 import AdminDashboard from "./pages/AdminDashboard";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import EmployeeList from "./pages/EmployeeList";
-import EmployeeProfile from "./pages/EmployeeProfile";
-import InventoryDashboard from "./pages/InventoryDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import OrdersPage from "./pages/OrdersPage";
 import ProductList from "./pages/ProductList";
 import ReportsPage from "./pages/ReportsPage";
 import SalesPage from "./pages/SalesPage";
-import UserList from "./pages/UserList";
+import StaffDashboard from "./pages/StaffDashboard";
+import StaffList from "./pages/StaffList";
+import StaffProfile from "./pages/StaffProfile";
 
 export default function App() {
   return (
@@ -31,30 +31,31 @@ export default function App() {
             <Route path="/admin-dashboard" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="inventory" element={<ProductList />} />
-              <Route path="employees" element={<EmployeeList />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="sales" element={<SalesPage />} />
               <Route path="reports" element={<ReportsPage />} />
-              <Route path="users" element={<UserList />} />
+              <Route path="staff" element={<StaffList />} />
+              <Route path="managers" element={<AccountList kind="MANAGER" />} />
+              <Route path="admins" element={<AccountList kind="ADMIN" />} />
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["INVENTORY_MANAGER"]} />}>
-            <Route path="/inventory-dashboard" element={<InventoryManagerLayout />}>
-              <Route index element={<InventoryDashboard />} />
+          <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
+            <Route path="/manager-dashboard" element={<ManagerLayout />}>
+              <Route index element={<ManagerDashboard />} />
               <Route path="products" element={<ProductList />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="sales" element={<SalesPage />} />
               <Route path="reports" element={<ReportsPage />} />
-              <Route path="staff" element={<EmployeeList />} />
+              <Route path="staff" element={<StaffList />} />
             </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["STAFF"]} />}>
-            <Route path="/employee-dashboard" element={<EmployeeLayout />}>
-              <Route index element={<EmployeeDashboard />} />
+            <Route path="/staff-dashboard" element={<StaffLayout />}>
+              <Route index element={<StaffDashboard />} />
               <Route path="inventory" element={<ProductList />} />
-              <Route path="profile" element={<EmployeeProfile />} />
+              <Route path="profile" element={<StaffProfile />} />
             </Route>
           </Route>
 

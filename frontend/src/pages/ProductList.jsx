@@ -19,7 +19,7 @@ const STATUS_BADGE = {
 
 export default function ProductList() {
   const { role } = useAuth();
-  const canManage = role === "ADMIN" || role === "INVENTORY_MANAGER";
+  const canManage = role === "ADMIN" || role === "MANAGER";
 
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
