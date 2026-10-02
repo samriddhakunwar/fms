@@ -1,5 +1,21 @@
--- Factory Management System schema
--- Run: mysql -u root -p < database_schema.sql
+-- ===========================================================================
+-- Factory Management System (fms_db) — schema
+-- Generated from the live local MySQL database via SHOW CREATE TABLE.
+-- Matches manage.py migrate exactly — verified column-for-column,
+-- index-for-index, constraint-for-constraint against a fresh migrate run.
+--
+-- Table names are the readable ones set via Meta.db_table / db_table on the
+-- M2M fields (customer_order, customer_order_item, employee, product,
+-- salary_payment, sale, sale_item, user, user_group, user_permission).
+-- Django's own auth_*/django_* tables keep their framework names.
+--
+-- Orders and sales are separate tables on purpose: an order records what the
+-- customer asked for and moves no stock, and `sale`.`order_id` points back at
+-- the order an invoice was raised from (NULL for a direct sale).
+--
+-- Run with:
+--   mysql -u root -p < database_schema.sql
+-- ===========================================================================
 
 CREATE DATABASE IF NOT EXISTS `fms_db`
   CHARACTER SET utf8mb4
@@ -10,7 +26,9 @@ USE `fms_db`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 
+-- -------------------------------------------------------------------------
 -- Django built-in tables
+-- -------------------------------------------------------------------------
 
 CREATE TABLE `django_content_type` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -64,7 +82,9 @@ CREATE TABLE `auth_group_permissions` (
   CONSTRAINT `auth_group_permissions_group_id_b120cbf9_fk_auth_group_id` FOREIGN KEY (`group_id`) REFERENCES `auth_group` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- -------------------------------------------------------------------------
 -- accounts app (custom user model)
+-- -------------------------------------------------------------------------
 
 CREATE TABLE `user` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -123,12 +143,14 @@ CREATE TABLE `django_admin_log` (
   CONSTRAINT `django_admin_log_chk_1` CHECK ((`action_flag` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- -------------------------------------------------------------------------
 -- employees app
+-- -------------------------------------------------------------------------
 
 CREATE TABLE `employee` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `full_name` varchar(255) NOT NULL,
-  `email` varchar(254) DEFAULT NULL,
+  `email` varchar(254) NOT NULL,
   `phone` varchar(20) NOT NULL,
   `address` longtext NOT NULL,
   `designation` varchar(100) NOT NULL,
@@ -142,7 +164,9 @@ CREATE TABLE `employee` (
   CONSTRAINT `employee_user_id_cc4f5a1c_fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- -------------------------------------------------------------------------
 -- inventory app
+-- -------------------------------------------------------------------------
 
 CREATE TABLE `product` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -161,7 +185,9 @@ CREATE TABLE `product` (
   CONSTRAINT `product_chk_2` CHECK ((`minimum_stock_level` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- -------------------------------------------------------------------------
 -- orders app
+-- -------------------------------------------------------------------------
 
 CREATE TABLE `customer_order` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -191,7 +217,25 @@ CREATE TABLE `customer_order_item` (
   CONSTRAINT `customer_order_item_chk_1` CHECK ((`quantity` >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- -------------------------------------------------------------------------
+-- salary app
+-- -------------------------------------------------------------------------
+
+CREATE TABLE `salary_payment` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `amount` decimal(12,2) NOT NULL,
+  `payment_date` datetime(6) NOT NULL,
+  `payment_method` varchar(20) NOT NULL,
+  `remarks` longtext NOT NULL,
+  `employee_id` bigint NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` (`employee_id`),
+  CONSTRAINT `salary_salarypayment_employee_id_b6da0e89_fk_employee_id` FOREIGN KEY (`employee_id`) REFERENCES `employee` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- -------------------------------------------------------------------------
 -- sales app
+-- -------------------------------------------------------------------------
 
 CREATE TABLE `sale` (
   `id` bigint NOT NULL AUTO_INCREMENT,
