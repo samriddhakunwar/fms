@@ -1,17 +1,25 @@
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from accounts.activity import ViewLoggingMixin
+from accounts.models import ActivityLog, User
 from accounts.permissions import IsAdminOrManagerReadOnly, IsStaff
+from fms.actor import ActorMixin, admin_of
 
 from .models import Staff
 from .serializers import StaffSerializer
 
 
-class StaffViewSet(viewsets.ModelViewSet):
+class StaffViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     """Staff HR records. Admin manages them; Manager may only view."""
 
-    queryset = Staff.objects.select_related("user").all()
+    queryset = Staff.objects.select_related(
+        "user", "manager__user", "created_by_admin__user"
+    )
+    view_log_target = "staff"
+    view_log_roles = (User.Role.MANAGER,)
     serializer_class = StaffSerializer
     permission_classes = [IsAdminOrManagerReadOnly]
     filter_backends = [filters.SearchFilter]
@@ -25,7 +33,19 @@ class StaffViewSet(viewsets.ModelViewSet):
         designation = self.request.query_params.get("designation")
         if designation:
             queryset = queryset.filter(designation__iexact=designation)
+        manager = self.request.query_params.get("manager")
+        if manager == "me":
+            queryset = queryset.filter(manager__user=self.request.user)
+        elif manager:
+            if not manager.isdigit():
+                raise ValidationError(
+                    {"manager": "manager must be a Manager id or 'me'."}
+                )
+            queryset = queryset.filter(manager_id=manager)
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(created_by_admin=admin_of(self.request.user))
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
@@ -39,7 +59,7 @@ class StaffViewSet(viewsets.ModelViewSet):
     )
     def me(self, request):
         # Always looked up from the session user, never from an id in the URL.
-        staff = Staff.objects.select_related("user").filter(user=request.user).first()
+        staff = self.queryset.filter(user=request.user).first()
 
         if staff is None:
             return Response(
@@ -52,4 +72,5 @@ class StaffViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        ActivityLog.record(request, ActivityLog.Action.VIEW, "staff", staff.pk)
         return Response(self.get_serializer(staff).data)

@@ -1,6 +1,8 @@
 from rest_framework import filters, viewsets
 from rest_framework.exceptions import ValidationError
 
+from fms.actor import admin_of
+
 from .models import User
 from .permissions import IsAdmin
 from .serializers import (
@@ -73,3 +75,12 @@ class ManagerAccountViewSet(RoleAccountViewSet):
     role_value = User.Role.MANAGER
     profile_attr = "manager_profile"
     serializer_class = ManagerAccountSerializer
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("manager_profile__created_by_admin__user")
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        profile = user.manager_profile  # created by the post_save signal
+        profile.created_by_admin = admin_of(self.request.user)
+        profile.save(update_fields=["created_by_admin"])

@@ -4,7 +4,9 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 
-from .models import AdminProfile, ManagerProfile, User
+from fms.actor import admin_of
+
+from .models import ActivityLog, AdminProfile, ManagerProfile, User
 
 
 @admin.register(User)
@@ -174,7 +176,7 @@ class RoleProfileAdmin(admin.ModelAdmin):
             (
                 None,
                 {
-                    "fields": ("user", "created_at"),
+                    "fields": self.readonly_fields,
                     "description": (
                         "Edit the name, email, password or active status on the "
                         "linked login account."
@@ -233,3 +235,34 @@ class AdminProfileAdmin(RoleProfileAdmin):
 @admin.register(ManagerProfile)
 class ManagerProfileAdmin(RoleProfileAdmin):
     add_form = ManagerAddForm
+
+    list_display = RoleProfileAdmin.list_display + ("created_by_admin",)
+    list_select_related = ("user", "created_by_admin__user")
+    readonly_fields = ("user", "created_by_admin", "created_at")
+    fields = readonly_fields
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by_admin = admin_of(request.user)
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    """Logins, logouts and read-only views; written by the API, never edited."""
+
+    list_display = ("created_at", "user", "role", "action", "target", "object_id", "ip_address")
+    list_select_related = ("user",)
+    list_filter = ("action", "role", "target", "created_at")
+    search_fields = ("user__username", "target", "ip_address")
+    ordering = ("-created_at", "-id")
+    date_hierarchy = "created_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

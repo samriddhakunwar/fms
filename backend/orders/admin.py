@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from fms.actor import role_fields
+
 from .models import Order, OrderItem
 
 
@@ -22,15 +24,23 @@ class OrderAdmin(admin.ModelAdmin):
         "total_amount",
         "order_date",
         "expected_delivery_date",
-        "created_by",
+        "created_by_admin",
+        "created_by_manager",
     )
+    list_select_related = ("created_by_admin__user", "created_by_manager__user")
     list_display_links = ("order_number",)
     list_filter = ("status", "order_date")
     search_fields = ("order_number", "customer_name")
     ordering = ("-order_date",)
     date_hierarchy = "order_date"
 
-    readonly_fields = ("order_number", "order_date", "total_amount", "created_by")
+    readonly_fields = (
+        "order_number",
+        "order_date",
+        "total_amount",
+        "created_by_admin",
+        "created_by_manager",
+    )
 
     fieldsets = (
         (
@@ -43,7 +53,8 @@ class OrderAdmin(admin.ModelAdmin):
                     "order_date",
                     "expected_delivery_date",
                     "notes",
-                    "created_by",
+                    "created_by_admin",
+                    "created_by_manager",
                 )
             },
         ),
@@ -59,8 +70,9 @@ class OrderAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        if not change and request.user.role in ("ADMIN", "MANAGER"):
-            obj.created_by = request.user
+        if not change:
+            for field, profile in role_fields(request.user, "created_by_").items():
+                setattr(obj, field, profile)
         super().save_model(request, obj, form, change)
 
     def save_related(self, request, form, formsets, change):

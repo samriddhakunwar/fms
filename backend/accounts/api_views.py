@@ -11,7 +11,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import User
+from .models import ActivityLog, User
 from .serializers import LoginSerializer, UserSerializer
 
 
@@ -77,12 +77,19 @@ def api_login(request):
     user = cast("User | None", authenticate(request, username=username, password=password))
 
     if user is None:
+        # Credit the attempt to the account it targeted, when there is one.
+        ActivityLog.record(
+            request,
+            ActivityLog.Action.LOGIN_FAILED,
+            user=User.objects.filter(username=username).first(),
+        )
         return Response(
             {"message": "Invalid username or password"},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
     login(request, user)
+    ActivityLog.record(request, ActivityLog.Action.LOGIN, user=user)
 
     return Response(
         {
@@ -107,6 +114,8 @@ def api_login(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def api_logout(request):
+    if request.user.is_authenticated:
+        ActivityLog.record(request, ActivityLog.Action.LOGOUT)
     logout(request)
     return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 

@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.admin.options import IS_POPUP_VAR
 
+from fms.actor import admin_of
+
 from .models import Staff
 
 
@@ -13,12 +15,15 @@ class StaffAdmin(admin.ModelAdmin):
         "full_name",
         "user",
         "designation",
+        "manager",
         "email",
         "phone",
         "salary",
         "status",
         "joining_date",
     )
+
+    list_select_related = ("user", "manager__user")
 
     list_display_links = ("full_name",)
 
@@ -27,6 +32,7 @@ class StaffAdmin(admin.ModelAdmin):
     list_filter = (
         "status",       # Active / Inactive
         "designation",
+        "manager",      # Who they report to
     )
 
     search_fields = (
@@ -37,6 +43,8 @@ class StaffAdmin(admin.ModelAdmin):
     )
 
     raw_id_fields = ("user",)
+
+    readonly_fields = ("created_by_admin", "created_at", "updated_at")
 
     actions = ("deactivate_staff", "reactivate_staff")
 
@@ -49,6 +57,11 @@ class StaffAdmin(admin.ModelAdmin):
     # Deletion policy
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by_admin = admin_of(request.user)
+        super().save_model(request, obj, form, change)
 
     # Actions
     @admin.action(description="Deactivate selected staff (soft delete)")
@@ -102,7 +115,15 @@ class StaffAdmin(admin.ModelAdmin):
                     "joining_date",
                     "salary",
                     "status",
+                    "manager",
                 ),
+            },
+        ),
+        (
+            "Record",
+            {
+                "fields": ("created_by_admin", "created_at", "updated_at"),
+                "classes": ("collapse",),
             },
         ),
     )

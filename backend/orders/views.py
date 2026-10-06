@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdmin, IsAdminOrManagerNoUpdate
+from fms.actor import ActorMixin, admin_of, role_fields
 from fms.dates import day_range_filter, parse_day_param
 from sales.models import Sale, SaleItem
 from sales.serializers import SaleSerializer, generate_invoice_number
@@ -13,11 +14,11 @@ from .models import Order
 from .serializers import OrderSerializer
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(ActorMixin, viewsets.ModelViewSet):
     """Customer orders."""
 
     queryset = Order.objects.prefetch_related("items__product").select_related(
-        "sale", "created_by"
+        "sale", "created_by_admin__user", "created_by_manager__user"
     )
     serializer_class = OrderSerializer
     permission_classes = [IsAdminOrManagerNoUpdate]
@@ -41,7 +42,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        serializer.save(**role_fields(self.request.user, "created_by_"))
 
     def perform_destroy(self, instance):
         if instance.status == Order.Status.FULFILLED:
@@ -92,6 +93,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     invoice_number=generate_invoice_number(),
                     sold_to=order.customer_name,
                     order=order,
+                    created_by_admin=admin_of(request.user),
                 )
 
                 total = 0

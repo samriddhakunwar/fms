@@ -108,7 +108,7 @@ class OrderApiTests(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(response.data["created_by"], account.id)
             self.assertEqual(response.data["created_by_username"], username)
-            self.assertEqual(Order.objects.get(pk=response.data["id"]).created_by, account)
+            self.assertEqual(Order.objects.get(pk=response.data["id"]).created_by_user, account)
 
     def test_deleting_the_creator_keeps_the_order(self):
         self._login("manager_user")
@@ -122,7 +122,8 @@ class OrderApiTests(APITestCase):
         )
         self.manager.delete()
         order = Order.objects.get(pk=response.data["id"])
-        self.assertIsNone(order.created_by)
+        self.assertIsNone(order.created_by_manager)
+        self.assertIsNone(order.created_by_user)
 
     def test_employee_cannot_create_order(self):
         self._login("employee_user")

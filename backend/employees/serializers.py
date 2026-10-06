@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from rest_framework import serializers
 
-from accounts.models import User
+from accounts.models import ManagerProfile, User
 
 from .models import Staff
 
@@ -16,6 +16,13 @@ class StaffSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    manager = serializers.PrimaryKeyRelatedField(
+        queryset=ManagerProfile.objects.select_related("user"),
+        required=False,
+        allow_null=True,
+    )
+    manager_name = serializers.SerializerMethodField()
+    created_by_admin_name = serializers.SerializerMethodField()
 
     login_username = serializers.CharField(
         write_only=True, required=False, allow_blank=True, max_length=150
@@ -38,10 +45,28 @@ class StaffSerializer(serializers.ModelSerializer):
             "joining_date",
             "salary",
             "status",
+            "manager",
+            "manager_name",
+            "created_by_admin",
+            "created_by_admin_name",
+            "created_at",
+            "updated_at",
             "login_username",
             "login_password",
         ]
-        read_only_fields = ["id", "username"]
+        read_only_fields = [
+            "id",
+            "username",
+            "created_by_admin",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_manager_name(self, obj):
+        return str(obj.manager) if obj.manager_id else None
+
+    def get_created_by_admin_name(self, obj):
+        return str(obj.created_by_admin) if obj.created_by_admin_id else None
 
     def validate_user(self, value):
         if value is None:

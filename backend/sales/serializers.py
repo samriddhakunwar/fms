@@ -40,6 +40,8 @@ class SaleSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(
         source="order.order_number", read_only=True, default=None
     )
+    created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Sale
@@ -53,6 +55,10 @@ class SaleSerializer(serializers.ModelSerializer):
             "order_number",
             "items",
             "items_input",
+            "created_by_admin",
+            "created_by_name",
+            "updated_by_admin",
+            "updated_by_name",
         ]
         read_only_fields = [
             "id",
@@ -62,7 +68,15 @@ class SaleSerializer(serializers.ModelSerializer):
             "order",
             "order_number",
             "items",
+            "created_by_admin",
+            "updated_by_admin",
         ]
+
+    def get_created_by_name(self, obj):
+        return str(obj.created_by_admin) if obj.created_by_admin_id else None
+
+    def get_updated_by_name(self, obj):
+        return str(obj.updated_by_admin) if obj.updated_by_admin_id else None
 
     def validate_items_input(self, value):
         if not value:
@@ -89,6 +103,7 @@ class SaleSerializer(serializers.ModelSerializer):
             sale = Sale.objects.create(
                 invoice_number=generate_invoice_number(),
                 sold_to=validated_data["sold_to"],
+                created_by_admin=validated_data.get("created_by_admin"),
             )
 
             total = Decimal("0")

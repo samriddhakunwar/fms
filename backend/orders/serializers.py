@@ -45,9 +45,11 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     items_input = OrderItemInputSerializer(many=True, write_only=True, required=False)
     invoice_number = serializers.SerializerMethodField()
-    created_by_username = serializers.CharField(
-        source="created_by.username", read_only=True, default=None
-    )
+    # created_by / created_by_username predate the role columns; kept so
+    # existing clients still get the creator's login id and username.
+    created_by = serializers.SerializerMethodField()
+    created_by_username = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = Order
@@ -65,6 +67,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "invoice_number",
             "created_by",
             "created_by_username",
+            "created_by_admin",
+            "created_by_manager",
+            "created_by_name",
         ]
         read_only_fields = [
             "id",
@@ -72,8 +77,17 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_amount",
             "order_date",
             "items",
-            "created_by",
+            "created_by_admin",
+            "created_by_manager",
         ]
+
+    def get_created_by(self, obj):
+        user = obj.created_by_user
+        return user.pk if user else None
+
+    def get_created_by_username(self, obj):
+        user = obj.created_by_user
+        return user.username if user else None
 
     def get_invoice_number(self, obj):
         sale = getattr(obj, "sale", None)

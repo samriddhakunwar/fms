@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.db import models, transaction
 from django.db.models.signals import post_delete, pre_delete
 from django.dispatch import receiver
@@ -44,8 +45,33 @@ class Sale(models.Model):
             "without it."
         ),
     )
+    # Only Admins record or change sales (Managers are view-only), so there
+    # is no Manager column here.
+    created_by_admin = models.ForeignKey(
+        "accounts.AdminProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sales_created",
+        verbose_name="Recorded By (Admin)",
+        help_text=(
+            "The Admin who recorded this sale. Empty for sales recorded before "
+            "this was tracked, or if that Admin was later deleted."
+        ),
+    )
+    updated_by_admin = models.ForeignKey(
+        "accounts.AdminProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sales_updated",
+        verbose_name="Last Updated By (Admin)",
+        help_text="The Admin who last edited this sale.",
+    )
 
     items: "models.Manager[SaleItem]"
+    created_by_admin_id: int | None
+    updated_by_admin_id: int | None
 
     class Meta:
         db_table = "sale"
@@ -106,6 +132,32 @@ class SaleItem(models.Model):
             f"@ {self.unit_price} = {self.subtotal}"
         )
 
+    def _stock_actor(self):
+        """The request user, else the login of the Admin who recorded the sale."""
+        from fms.actor import get_current_actor
+
+        actor = get_current_actor()
+        if actor is None and self.sale.created_by_admin_id:
+            actor = self.sale.created_by_admin.user
+        return actor
+
+    def _log_stock(self, product, change):
+        from inventory.models import StockMovement
+
+        movement_type = (
+            StockMovement.MovementType.SALE
+            if change < 0
+            else StockMovement.MovementType.SALE_RETURN
+        )
+        StockMovement.record(
+            product,
+            change,
+            movement_type,
+            self._stock_actor(),
+            f"Invoice {self.sale.invoice_number}",
+            self.sale,
+        )
+
     def save(self, *args, **kwargs):
         from inventory.models import Product
 
@@ -125,6 +177,7 @@ class SaleItem(models.Model):
                 self.subtotal = self.quantity * self.unit_price
                 product.quantity_in_stock -= self.quantity
                 product.save(update_fields=["quantity_in_stock", "updated_at"])
+                self._log_stock(product, -self.quantity)
             else:
                 previous = SaleItem.objects.get(pk=self.pk)
 
@@ -141,12 +194,14 @@ class SaleItem(models.Model):
 
                     product.quantity_in_stock -= delta
                     product.save(update_fields=["quantity_in_stock", "updated_at"])
+                    self._log_stock(product, -delta)
                 else:
                     old_product = Product.objects.select_for_update().get(
                         pk=previous.product_id
                     )
                     old_product.quantity_in_stock += previous.quantity
                     old_product.save(update_fields=["quantity_in_stock", "updated_at"])
+                    self._log_stock(old_product, previous.quantity)
 
                     new_product = Product.objects.select_for_update().get(
                         pk=self.product_id
@@ -159,6 +214,7 @@ class SaleItem(models.Model):
                         )
                     new_product.quantity_in_stock -= self.quantity
                     new_product.save(update_fields=["quantity_in_stock", "updated_at"])
+                    self._log_stock(new_product, -self.quantity)
 
                 self.subtotal = self.quantity * self.unit_price
 
@@ -167,12 +223,21 @@ class SaleItem(models.Model):
 
 @receiver(pre_delete, sender=SaleItem)
 def restore_stock_on_saleitem_delete(sender, instance, **kwargs):
-    from inventory.models import Product
+    from inventory.models import Product, StockMovement
 
     with transaction.atomic():
         product = Product.objects.select_for_update().get(pk=instance.product_id)
         product.quantity_in_stock += instance.quantity
         product.save(update_fields=["quantity_in_stock", "updated_at"])
+        # The sale may be deleted in this same cascade, so the movement is not
+        # linked to it; the invoice number in the reason keeps it traceable.
+        StockMovement.record(
+            product,
+            instance.quantity,
+            StockMovement.MovementType.SALE_RETURN,
+            instance._stock_actor(),
+            f"Invoice {instance.sale.invoice_number}: line removed",
+        )
 
 
 @receiver(post_delete, sender=Sale)

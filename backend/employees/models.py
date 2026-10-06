@@ -68,8 +68,41 @@ class Staff(models.Model):
         default=Status.ACTIVE,
         verbose_name="Employment Status",
     )
+    manager = models.ForeignKey(
+        "accounts.ManagerProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="staff_members",
+        verbose_name="Reports To",
+        help_text="The Manager this staff member reports to. Optional.",
+    )
+    created_by_admin = models.ForeignKey(
+        "accounts.AdminProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="staff_created",
+        verbose_name="Created By (Admin)",
+        help_text=(
+            "The Admin who added this staff record. Empty for records created "
+            "before this was tracked, or if that Admin was later deleted."
+        ),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        verbose_name="Created At",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        null=True,
+        verbose_name="Updated At",
+    )
 
     user_id: int | None
+    manager_id: int | None
+    created_by_admin_id: int | None
     get_status_display: Callable[[], str]
 
     class Meta:

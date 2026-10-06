@@ -1,10 +1,14 @@
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
+
+from fms.dates import day_range_filter
 
 
 # Helpers
@@ -18,17 +22,25 @@ def skip(label: str) -> None:
 
 # Command
 class Command(BaseCommand):
-    help = "Seed 5 mock records for every FMS model (accounts, inventory, employees, orders, sales)."
+    help = (
+        "Seed mock records for every FMS model (accounts, inventory, employees, "
+        "orders, sales, reports, activity log)."
+    )
 
     @transaction.atomic
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("\n🌱  Seeding FMS mock data …\n"))
 
         users     = self._seed_users()
-        products  = self._seed_products()
+        by_username = {user.username: user for user in users}
+        admin     = by_username["alice_admin"]
+        manager   = by_username["bob_inv"]
+        products  = self._seed_products(admin)
         self._seed_staff(users)
-        self._seed_orders(products)
-        self._seed_sales(products)
+        self._seed_orders(products, admin, manager)
+        self._seed_sales(products, admin)
+        self._seed_reports(admin, manager)
+        self._seed_activity(by_username)
 
         self.stdout.write(self.style.SUCCESS("\n✔  Seeding complete.\n"))
 
@@ -97,11 +109,19 @@ class Command(BaseCommand):
                 ok(f"User: {username}  ({user.get_role_display()})")
                 users.append(user)
 
+        # Managers were created by the seeded Admin.
+        from accounts.models import ManagerProfile
+
+        admin_profile = users[0].admin_profile
+        ManagerProfile.objects.filter(
+            user__in=users, created_by_admin__isnull=True
+        ).update(created_by_admin=admin_profile)
+
         return users
 
     # inventory.Product
-    def _seed_products(self):
-        from inventory.models import Product
+    def _seed_products(self, admin):
+        from inventory.models import Product, StockMovement
 
         self.stdout.write(self.style.HTTP_INFO("\n── inventory.Product ───────────────────────"))
 
@@ -151,10 +171,22 @@ class Command(BaseCommand):
         products = []
         for data in records:
             sku = data["sku"]
-            product, created = Product.objects.get_or_create(sku=sku, defaults=data)
+            product, created = Product.objects.get_or_create(
+                sku=sku, defaults={**data, "created_by_admin": admin.admin_profile}
+            )
             if created:
+                StockMovement.record(
+                    product,
+                    product.quantity_in_stock,
+                    StockMovement.MovementType.STOCK_IN,
+                    admin,
+                    "Opening stock",
+                )
                 ok(f"Product: {product.product_name}  (SKU: {sku})")
             else:
+                if product.created_by_admin_id is None and product.created_by_manager_id is None:
+                    product.created_by_admin = admin.admin_profile
+                    product.save(update_fields=["created_by_admin"])
                 skip(f"Product SKU {sku}")
             products.append(product)
 
@@ -223,13 +255,27 @@ class Command(BaseCommand):
         records[0]["user"] = by_username.get("dan_emp")
         records[1]["user"] = by_username.get("eva_emp")
 
+        # Bob manages the first three, Carol the last two; all added by Alice.
+        bob = by_username["bob_inv"].manager_profile
+        carol = by_username["carol_inv"].manager_profile
+        for index, data in enumerate(records):
+            data["manager"] = bob if index < 3 else carol
+            data["created_by_admin"] = by_username["alice_admin"].admin_profile
+
         employees = []
         for data in records:
             email = data["email"]
             employee, created = Staff.objects.get_or_create(email=email, defaults=data)
-            if not created and employee.user_id is None and data.get("user"):
-                employee.user = data["user"]
-                employee.save(update_fields=["user"])
+            if not created:
+                updates = [
+                    field
+                    for field in ("user", "manager", "created_by_admin")
+                    if getattr(employee, f"{field}_id") is None and data.get(field)
+                ]
+                for field in updates:
+                    setattr(employee, field, data[field])
+                if updates:
+                    employee.save(update_fields=updates)
             if created:
                 ok(f"Staff: {employee.full_name}  ({employee.designation})")
             else:
@@ -239,7 +285,7 @@ class Command(BaseCommand):
         return employees
 
     # orders.Order + orders.OrderItem
-    def _seed_orders(self, products):
+    def _seed_orders(self, products, admin, manager):
         from orders.models import Order, OrderItem
 
         self.stdout.write(self.style.HTTP_INFO("\n── orders.Order + OrderItem ────────────────"))
@@ -252,8 +298,19 @@ class Command(BaseCommand):
             ("ORD-2026-0005", "Annapurna Steel Udhyog",        3, 10, Order.Status.CANCELLED, timezone.datetime(2026, 8, 20, 16, 0, tzinfo=timezone.utc)),
         ]
 
-        for order_no, customer, prod_idx, qty, order_status, order_date in records:
+        # Bob (Manager) took the first three orders, Alice (Admin) the rest.
+        for index, (order_no, customer, prod_idx, qty, order_status, order_date) in enumerate(records):
+            creator = (
+                {"created_by_manager": manager.manager_profile}
+                if index < 3
+                else {"created_by_admin": admin.admin_profile}
+            )
             if Order.objects.filter(order_number=order_no).exists():
+                Order.objects.filter(
+                    order_number=order_no,
+                    created_by_admin__isnull=True,
+                    created_by_manager__isnull=True,
+                ).update(**creator)
                 skip(f"Order {order_no}")
                 continue
 
@@ -264,6 +321,7 @@ class Command(BaseCommand):
                 status=order_status,
                 order_date=order_date,
                 expected_delivery_date=(order_date + timezone.timedelta(days=7)).date(),
+                **creator,
             )
             OrderItem.objects.create(
                 order=order,
@@ -279,7 +337,7 @@ class Command(BaseCommand):
             )
 
     # sales.Sale + sales.SaleItem
-    def _seed_sales(self, products):
+    def _seed_sales(self, products, admin):
         from sales.models import Sale, SaleItem
 
         self.stdout.write(self.style.HTTP_INFO("\n── sales.Sale + SaleItem ───────────────────"))
@@ -294,6 +352,9 @@ class Command(BaseCommand):
 
         for inv_no, sold_to, prod_idx, qty, unit_price, sale_date in records:
             if Sale.objects.filter(invoice_number=inv_no).exists():
+                Sale.objects.filter(
+                    invoice_number=inv_no, created_by_admin__isnull=True
+                ).update(created_by_admin=admin.admin_profile)
                 skip(f"Sale {inv_no}")
                 continue
 
@@ -305,6 +366,7 @@ class Command(BaseCommand):
                 sold_to=sold_to,
                 total_amount=subtotal,   # Single line item; equals the subtotal
                 sale_date=sale_date,
+                created_by_admin=admin.admin_profile,  # Also credited on the SALE stock movement
             )
 
             SaleItem.objects.create(
@@ -319,3 +381,63 @@ class Command(BaseCommand):
                 f"Sale {inv_no}: {qty} × {product.product_name} "
                 f"@ {unit_price} = {subtotal}  (to {sold_to})"
             )
+
+    # reports.SalesReport
+    def _seed_reports(self, admin, manager):
+        from reports.models import SalesReport
+        from sales.models import Sale, SaleItem
+
+        self.stdout.write(self.style.HTTP_INFO("\n── reports.SalesReport ─────────────────────"))
+
+        records = [
+            (admin, {"admin": admin.admin_profile}, date(2026, 7, 1), date(2026, 7, 31)),
+            (manager, {"manager": manager.manager_profile}, date(2026, 7, 10), date(2026, 7, 20)),
+        ]
+        for user, generated_by, start, end in records:
+            if SalesReport.objects.filter(start_date=start, end_date=end, **generated_by).exists():
+                skip(f"Sales report {start} – {end} by {user.username}")
+                continue
+
+            window = day_range_filter("sale_date", start, end)
+            sales = Sale.objects.filter(**window)
+            totals = sales.aggregate(revenue=Sum("total_amount"))
+            items = SaleItem.objects.filter(sale__in=sales).aggregate(n=Sum("quantity"))
+            SalesReport.objects.create(
+                start_date=start,
+                end_date=end,
+                sales_count=sales.count(),
+                items_sold=items["n"] or 0,
+                total_revenue=totals["revenue"] or Decimal("0"),
+                **generated_by,
+            )
+            ok(f"Sales report {start} – {end} by {user.username}")
+
+    # accounts.ActivityLog
+    def _seed_activity(self, by_username):
+        from accounts.models import ActivityLog
+
+        self.stdout.write(self.style.HTTP_INFO("\n── accounts.ActivityLog ────────────────────"))
+
+        if ActivityLog.objects.filter(user__in=by_username.values()).exists():
+            skip("Activity log entries")
+            return
+
+        Action = ActivityLog.Action
+        entries = [
+            ("alice_admin", Action.LOGIN, ""),
+            ("bob_inv", Action.LOGIN, ""),
+            ("bob_inv", Action.VIEW, "staff"),
+            ("bob_inv", Action.VIEW, "sale"),
+            ("dan_emp", Action.LOGIN_FAILED, ""),
+            ("dan_emp", Action.LOGIN, ""),
+            ("dan_emp", Action.VIEW, "product"),
+            ("dan_emp", Action.VIEW, "staff"),
+            ("dan_emp", Action.LOGOUT, ""),
+            ("bob_inv", Action.LOGOUT, ""),
+        ]
+        for username, action, target in entries:
+            user = by_username[username]
+            ActivityLog.objects.create(
+                user=user, role=user.role, action=action, target=target, ip_address="127.0.0.1"
+            )
+        ok(f"{len(entries)} activity log entries")

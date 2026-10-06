@@ -7,8 +7,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdminOrManager
+from fms.actor import role_fields
 from fms.dates import day_range_filter
 from sales.models import Sale
+
+from .models import SalesReport
+from .serializers import SalesReportSerializer
 
 MAX_DAYS = 180
 
@@ -129,8 +133,23 @@ def sales_report(request):
 
     day_count = len(days)
 
+    report = SalesReport.objects.create(
+        **role_fields(request.user),
+        start_date=start,
+        end_date=end,
+        sales_count=sales_count,
+        items_sold=items_sold,
+        total_revenue=revenue,
+    )
+
     return Response(
         {
+            "report_id": report.pk,
+            "generated_by": report.generated_by_name,
+            "generated_by_role": request.user.role,
+            "admin": report.admin_id,
+            "manager": report.manager_id,
+            "generated_at": report.generated_at.isoformat(),
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
             "truncated": truncated,
@@ -158,3 +177,11 @@ def sales_report(request):
             ),
         }
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminOrManager])
+def sales_report_history(request):
+    """Every sales report generated so far, newest first."""
+    reports = SalesReport.objects.select_related("admin__user", "manager__user")
+    return Response(SalesReportSerializer(reports, many=True).data)

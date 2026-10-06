@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib.admin.options import IS_POPUP_VAR
+from django.db import transaction
 
-from .models import Product
+from fms.actor import role_fields
+
+from .models import Product, StockMovement
 
 
 # Custom list filter
@@ -60,7 +63,14 @@ class ProductAdmin(admin.ModelAdmin):
 
     # Detail (add / change) view
     # Auto-managed timestamps should never be editable
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = (
+        "created_by_admin",
+        "created_by_manager",
+        "updated_by_admin",
+        "updated_by_manager",
+        "created_at",
+        "updated_at",
+    )
 
     fieldsets = (
         (
@@ -96,11 +106,47 @@ class ProductAdmin(admin.ModelAdmin):
         (
             "Timestamps",
             {
-                "fields": ("created_at", "updated_at"),
+                "fields": (
+                    "created_by_admin",
+                    "created_by_manager",
+                    "updated_by_admin",
+                    "updated_by_manager",
+                    "created_at",
+                    "updated_at",
+                ),
                 "classes": ("collapse",),
             },
         ),
     )
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        stamp = "updated_by_" if change else "created_by_"
+        for field, profile in role_fields(request.user, stamp).items():
+            setattr(obj, field, profile)
+        if change:
+            previous = (
+                Product.objects.select_for_update()
+                .values_list("quantity_in_stock", flat=True)
+                .get(pk=obj.pk)
+            )
+            super().save_model(request, obj, form, change)
+            StockMovement.record(
+                obj,
+                obj.quantity_in_stock - previous,
+                StockMovement.MovementType.ADJUSTMENT,
+                request.user,
+                "Stock quantity edited in Django admin",
+            )
+        else:
+            super().save_model(request, obj, form, change)
+            StockMovement.record(
+                obj,
+                obj.quantity_in_stock,
+                StockMovement.MovementType.STOCK_IN,
+                request.user,
+                "Opening stock",
+            )
 
     # Deletion policy
     def has_delete_permission(self, request, obj=None):
@@ -137,3 +183,35 @@ class ProductAdmin(admin.ModelAdmin):
         if obj.is_low_stock():
             return "⚠ Low Stock"
         return "✅ In Stock"
+
+
+# Stock movement admin (read-only ledger)
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    """Written automatically whenever stock changes; never edited by hand."""
+
+    list_display = (
+        "created_at",
+        "product",
+        "movement_type",
+        "quantity_change",
+        "quantity_after",
+        "admin",
+        "manager",
+        "sale",
+        "reason",
+    )
+    list_select_related = ("product", "admin__user", "manager__user", "sale")
+    list_filter = ("movement_type", "created_at")
+    search_fields = ("product__product_name", "product__sku", "reason", "sale__invoice_number")
+    ordering = ("-created_at", "-id")
+    date_hierarchy = "created_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from fms.actor import admin_of
+
 from .forms import SaleItemAdminForm
 from .models import Sale, SaleItem
 
@@ -34,7 +36,10 @@ class SaleAdmin(admin.ModelAdmin):
         "order",
         "total_amount",
         "sale_date",
+        "created_by_admin",
     )
+
+    list_select_related = ("order", "created_by_admin__user")
 
     list_display_links = ("invoice_number",)
 
@@ -52,7 +57,13 @@ class SaleAdmin(admin.ModelAdmin):
     date_hierarchy = "sale_date"
 
     # Detail (add / change) view
-    readonly_fields = ("invoice_number", "sale_date", "total_amount")
+    readonly_fields = (
+        "invoice_number",
+        "sale_date",
+        "total_amount",
+        "created_by_admin",
+        "updated_by_admin",
+    )
 
     raw_id_fields = ("order",)
 
@@ -65,6 +76,8 @@ class SaleAdmin(admin.ModelAdmin):
                     "sold_to",
                     "order",
                     "sale_date",
+                    "created_by_admin",
+                    "updated_by_admin",
                 ),
             },
         ),
@@ -78,6 +91,13 @@ class SaleAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            obj.updated_by_admin = admin_of(request.user)
+        else:
+            obj.created_by_admin = admin_of(request.user)
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(SaleItem)

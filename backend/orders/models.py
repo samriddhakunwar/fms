@@ -1,9 +1,11 @@
 from decimal import Decimal
 from typing import Callable
 
-from django.conf import settings
 from django.db import models
 from django.utils import timezone
+
+from fms.actor import role_name
+from fms.constraints import at_most_one_role
 
 
 class Order(models.Model):
@@ -50,22 +52,28 @@ class Order(models.Model):
         blank=True,
         verbose_name="Notes",
     )
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    created_by_admin = models.ForeignKey(
+        "accounts.AdminProfile",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="orders_created",
-        limit_choices_to={"role__in": ["ADMIN", "MANAGER"]},
-        verbose_name="Created By",
-        help_text=(
-            "The Admin or Manager account that recorded this order. Empty for "
-            "orders created before this was tracked, or if that account was "
-            "later deleted."
-        ),
+        verbose_name="Created By (Admin)",
+        help_text="The Admin who recorded this order, if an Admin did.",
+    )
+    created_by_manager = models.ForeignKey(
+        "accounts.ManagerProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="orders_created",
+        verbose_name="Created By (Manager)",
+        help_text="The Manager who recorded this order, if a Manager did.",
     )
 
     items: "models.Manager[OrderItem]"
+    created_by_admin_id: int | None
+    created_by_manager_id: int | None
     get_status_display: Callable[[], str]
 
     class Meta:
@@ -73,12 +81,27 @@ class Order(models.Model):
         verbose_name = "Order"
         verbose_name_plural = "Orders"
         ordering = ["-order_date"]
+        constraints = [
+            at_most_one_role(
+                "created_by_admin", "created_by_manager", "customer_order_created_by_one_role"
+            ),
+        ]
 
     def __str__(self):
         return (
             f"Order #{self.order_number} — {self.customer_name} — "
             f"{self.total_amount} ({self.get_status_display()})"
         )
+
+    @property
+    def created_by_name(self):
+        return role_name(self.created_by_admin, self.created_by_manager)
+
+    @property
+    def created_by_user(self):
+        """The login account behind whichever creator column is set."""
+        profile = self.created_by_admin or self.created_by_manager
+        return profile.user if profile else None
 
     @property
     def is_open(self) -> bool:

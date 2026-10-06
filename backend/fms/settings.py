@@ -41,7 +41,7 @@ PROJECT_APPS = [
     'employees.apps.EmployeesConfig',  # Staff (employee) records
     'orders.apps.OrdersConfig',        # Customer orders (pre-invoice)
     'sales.apps.SalesConfig',          # Sales transactions (invoices)
-    'reports.apps.ReportsConfig',      # Reporting (no DB models)
+    'reports.apps.ReportsConfig',      # Sales reports + log of generated reports
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS

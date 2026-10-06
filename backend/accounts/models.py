@@ -1,8 +1,11 @@
+import logging
 from typing import Callable
 
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
+
+logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
@@ -120,9 +123,22 @@ class ManagerProfile(models.Model):
         limit_choices_to={"role": User.Role.MANAGER},
         verbose_name="Login Account",
     )
+    created_by_admin = models.ForeignKey(
+        AdminProfile,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="managers_created",
+        verbose_name="Created By (Admin)",
+        help_text=(
+            "The Admin who created this Manager account. Empty for accounts "
+            "created before this was tracked, or if that Admin was later deleted."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     user_id: int
+    created_by_admin_id: int | None
 
     class Meta:
         db_table = "manager"
@@ -153,3 +169,96 @@ def sync_role_profile(user):
             model.objects.get_or_create(user=user)
         else:
             model.objects.filter(user=user).delete()
+
+
+class ActivityLog(models.Model):
+    """
+    Logins, logouts and read-only views, for every role. Rows are written by
+    the API and never edited; writing one never fails the request.
+    """
+
+    class Action(models.TextChoices):
+        LOGIN = "LOGIN", "Login"
+        LOGOUT = "LOGOUT", "Logout"
+        LOGIN_FAILED = "LOGIN_FAILED", "Login Failed"
+        VIEW = "VIEW", "View"
+
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="activity_logs",
+        verbose_name="User",
+        help_text="Empty for a failed login with an unknown username.",
+    )
+    role = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Role",
+        help_text="The account's role at the time, kept if the role later changes.",
+    )
+    action = models.CharField(
+        max_length=20,
+        choices=Action.choices,
+        verbose_name="Action",
+    )
+    target = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Target",
+        help_text='What was viewed, e.g. "product", "sale", "staff".',
+    )
+    object_id = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Object ID",
+        help_text="The record viewed; empty for a list.",
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name="IP Address",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+
+    get_action_display: Callable[[], str]
+
+    class Meta:
+        db_table = "activity_log"
+        verbose_name = "Activity Log Entry"
+        verbose_name_plural = "Activity Log"
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["user", "created_at"], name="activity_log_user_created_idx"),
+        ]
+
+    def __str__(self):
+        who = self.user.username if self.user_id else "unknown"
+        what = f" {self.target}" if self.target else ""
+        return f"{who} {self.get_action_display()}{what} ({self.created_at:%Y-%m-%d %H:%M})"
+
+    @classmethod
+    def record(cls, request, action, target="", object_id=None, user=None):
+        """
+        Log an action for request.user (or the given user). Swallows any error
+        so logging can never break the request it describes.
+        """
+        try:
+            if user is None:
+                user = getattr(request, "user", None)
+            if user is not None and not user.is_authenticated:
+                user = None
+            meta = getattr(request, "META", {})
+            with transaction.atomic():
+                return cls.objects.create(
+                    user=user,
+                    role=user.role if user else "",
+                    action=action,
+                    target=target,
+                    object_id=object_id,
+                    ip_address=meta.get("REMOTE_ADDR") or None,
+                )
+        except Exception:  # noqa: BLE001 — logging must never fail the request
+            logger.exception("Could not write activity log entry (%s %s)", action, target)
+            return None
