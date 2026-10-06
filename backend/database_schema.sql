@@ -430,7 +430,7 @@ CREATE TABLE `sales_report` (
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `sales_count` int unsigned NOT NULL,
-  `items_sold` int unsigned NOT NULL,
+  `items_sold` int unsigned NOT NULL,3
   `total_revenue` decimal(14,2) NOT NULL,
   `generated_at` datetime(6) NOT NULL,
   `admin_id` bigint DEFAULT NULL,
