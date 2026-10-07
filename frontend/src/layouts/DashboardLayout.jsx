@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ROLE_LABELS } from "../routes/roleRoutes";
 
-export default function DashboardLayout({ title, navItems, children }) {
+export default function DashboardLayout({ navItems }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,8 +56,7 @@ export default function DashboardLayout({ title, navItems, children }) {
         </aside>
 
         <main className="flex-grow-1 p-3 p-md-4 overflow-auto">
-          {title && <h2 className="mb-4">{title}</h2>}
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

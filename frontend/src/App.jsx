@@ -3,10 +3,9 @@ import { AuthProvider } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import { ADMIN_NAV, MANAGER_NAV, STAFF_NAV } from "./routes/roleRoutes";
 
-import AdminLayout from "./layouts/AdminLayout";
-import ManagerLayout from "./layouts/ManagerLayout";
-import StaffLayout from "./layouts/StaffLayout";
+import DashboardLayout from "./layouts/DashboardLayout";
 
 import AccountList from "./pages/AccountList";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -28,7 +27,7 @@ export default function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
-            <Route path="/admin-dashboard" element={<AdminLayout />}>
+            <Route path="/admin-dashboard" element={<DashboardLayout navItems={ADMIN_NAV} />}>
               <Route index element={<AdminDashboard />} />
               <Route path="inventory" element={<ProductList />} />
               <Route path="orders" element={<OrdersPage />} />
@@ -41,7 +40,7 @@ export default function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["MANAGER"]} />}>
-            <Route path="/manager-dashboard" element={<ManagerLayout />}>
+            <Route path="/manager-dashboard" element={<DashboardLayout navItems={MANAGER_NAV} />}>
               <Route index element={<ManagerDashboard />} />
               <Route path="products" element={<ProductList />} />
               <Route path="orders" element={<OrdersPage />} />
@@ -52,7 +51,7 @@ export default function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["STAFF"]} />}>
-            <Route path="/staff-dashboard" element={<StaffLayout />}>
+            <Route path="/staff-dashboard" element={<DashboardLayout navItems={STAFF_NAV} />}>
               <Route index element={<StaffDashboard />} />
               <Route path="inventory" element={<ProductList />} />
               <Route path="profile" element={<StaffProfile />} />
