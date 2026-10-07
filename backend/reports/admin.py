@@ -1,10 +1,12 @@
 from django.contrib import admin
 
+from accounts.admin import ReadOnlyAdmin
+
 from .models import SalesReport
 
 
 @admin.register(SalesReport)
-class SalesReportAdmin(admin.ModelAdmin):
+class SalesReportAdmin(ReadOnlyAdmin):
     """Log of generated sales reports; written by the report endpoint."""
 
     list_display = (
@@ -22,12 +24,3 @@ class SalesReportAdmin(admin.ModelAdmin):
     search_fields = ("admin__user__username", "manager__user__username")
     ordering = ("-generated_at", "-id")
     date_hierarchy = "generated_at"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False

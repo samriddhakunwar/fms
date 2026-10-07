@@ -59,11 +59,10 @@ def sales_report(request):
         .order_by("sale_date")
     )
 
-    buckets = {}
-    cursor = start
-    while cursor <= end:
-        buckets[cursor] = {"revenue": Decimal("0"), "count": 0}
-        cursor += timedelta(days=1)
+    buckets = {
+        start + timedelta(days=offset): {"revenue": Decimal("0"), "count": 0}
+        for offset in range((end - start).days + 1)
+    }
 
     products = {}
     items_sold = 0
@@ -71,11 +70,7 @@ def sales_report(request):
     sales_count = 0
 
     for sale in sales:
-        day = timezone.localtime(sale.sale_date).date()
-        bucket = buckets.get(day)
-        if bucket is None:  # pragma: no cover — the filter already bounds this
-            continue
-
+        bucket = buckets[timezone.localtime(sale.sale_date).date()]
         bucket["revenue"] += sale.total_amount
         bucket["count"] += 1
         revenue += sale.total_amount
