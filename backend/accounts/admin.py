@@ -13,8 +13,6 @@ from .models import ActivityLog, AdminProfile, ManagerProfile, User
 class UserAdmin(BaseUserAdmin):
     """Every login account. Role records live under Admins / Managers / Staff."""
 
-    # List view
-    # Columns shown in the changelist table
     list_display = (
         "username",
         "first_name",
@@ -25,28 +23,14 @@ class UserAdmin(BaseUserAdmin):
         "date_joined",
     )
 
-    # Sidebar filters in the changelist
-    list_filter = (
-        "role",
-        "is_active",   # Filter by active / inactive accounts
-        "is_staff",
-    )
+    list_filter = ("role", "is_active", "is_staff")
 
-    search_fields = (
-        "username",
-        "first_name",
-        "last_name",
-        "email",
-    )
-
-    # Default sort order in the changelist
+    search_fields = ("username", "first_name", "last_name", "email")
     ordering = ("date_joined",)
 
-    # Detail (add / change) view
     fieldsets = (
         *(BaseUserAdmin.fieldsets or ()),
         (
-            # Section title shown in the form
             "Factory Management — Role & Contact",
             {
                 "fields": ("role", "phone_number"),
@@ -75,6 +59,19 @@ class UserAdmin(BaseUserAdmin):
     readonly_fields = ("date_joined", "last_login")
 
     date_hierarchy = "date_joined"
+
+
+class ReadOnlyAdmin(admin.ModelAdmin):
+    """For log tables the app writes itself: viewable, never added, edited or deleted."""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class RoleAccountAddForm(forms.ModelForm):
@@ -248,7 +245,7 @@ class ManagerProfileAdmin(RoleProfileAdmin):
 
 
 @admin.register(ActivityLog)
-class ActivityLogAdmin(admin.ModelAdmin):
+class ActivityLogAdmin(ReadOnlyAdmin):
     """Logins, logouts and read-only views; written by the API, never edited."""
 
     list_display = ("created_at", "user", "role", "action", "target", "object_id", "ip_address")
@@ -257,12 +254,3 @@ class ActivityLogAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "target", "ip_address")
     ordering = ("-created_at", "-id")
     date_hierarchy = "created_at"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
