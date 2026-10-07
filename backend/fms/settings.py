@@ -18,7 +18,6 @@ DEBUG = os.environ.get("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
-# Application definition
 DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -28,10 +27,9 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
 ]
 
-# Third-party packages
 THIRD_PARTY_APPS = [
-    'rest_framework',   # Django REST Framework
-    'drf_yasg',         # Swagger / OpenAPI docs
+    'rest_framework',
+    'drf_yasg',
     'corsheaders',
 ]
 
@@ -49,8 +47,6 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
 
 AUTH_USER_MODEL = 'accounts.User'
 
-
-# Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -62,12 +58,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-
-# URL configuration
 ROOT_URLCONF = 'fms.urls'
 
-
-# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -84,13 +76,8 @@ TEMPLATES = [
     },
 ]
 
-
-# WSGI
 WSGI_APPLICATION = 'fms.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -102,7 +89,6 @@ DATABASES = {
     }
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -118,8 +104,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = os.environ.get("TIME_ZONE", "Asia/Kathmandu")
@@ -128,16 +112,10 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files
 STATIC_URL = 'static/'
 
-
-# Default primary key type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
@@ -149,10 +127,8 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'fms.exceptions.fms_exception_handler',
 }
 
-
-# drf-yasg (Swagger / ReDoc)
 SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': True,           # Show login/logout in Swagger UI
+    'USE_SESSION_AUTH': True,
     'SECURITY_DEFINITIONS': {
         'Basic': {'type': 'basic'},
         'Session': {'type': 'apiKey', 'in': 'cookie', 'name': 'sessionid'},

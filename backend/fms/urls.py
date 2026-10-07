@@ -6,8 +6,6 @@ from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
-
-# Swagger / OpenAPI schema view
 schema_view = get_schema_view(
     openapi.Info(
         title="Factory Management System API",
@@ -19,15 +17,9 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
-
-# URL patterns
 urlpatterns = [
     path("", lambda request: redirect("schema-swagger-ui"), name="root"),
-
-    # Django admin panel
     path("admin/", admin.site.urls),
-
-    # API endpoints
     path("api/auth/", include("accounts.api_urls")),
     path("api/", include("accounts.users_urls")),
     path("api/", include("inventory.urls")),
@@ -35,24 +27,7 @@ urlpatterns = [
     path("api/", include("orders.urls")),
     path("api/", include("sales.urls")),
     path("api/", include("reports.urls")),
-
-    # Swagger UI
-    path(
-        "swagger/",
-        schema_view.with_ui("swagger", cache_timeout=0),
-        name="schema-swagger-ui",
-    ),
-
-    # ReDoc
-    path(
-        "redoc/",
-        schema_view.with_ui("redoc", cache_timeout=0),
-        name="schema-redoc",
-    ),
-
-    path(
-        "api/",
-        schema_view.without_ui(cache_timeout=0),
-        name="schema-json",
-    ),
+    path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+    path("api/", schema_view.without_ui(cache_timeout=0), name="schema-json"),
 ]
