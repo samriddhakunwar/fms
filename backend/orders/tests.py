@@ -52,6 +52,19 @@ class OrderApiTests(APITestCase):
         order.recalculate_total()
         return order
 
+    def test_summary_counts_pending_and_fulfilled(self):
+        self._create_order()
+        self._create_order()
+        fulfilled = self._create_order()
+        fulfilled.status = Order.Status.FULFILLED
+        fulfilled.save()
+        self._login("manager_user")
+        response = self.client.get(reverse("order-summary"))
+        self.assertEqual(
+            response.data,
+            {"total_orders": 3, "pending_orders": 2, "fulfilled_orders": 1},
+        )
+
     # Creation
     def test_admin_can_create_order_and_total_is_computed(self):
         self._login("admin_user")

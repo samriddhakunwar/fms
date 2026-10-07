@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from fms.actor import role_fields
+from fms.actor import stamp
 
 from .models import Order, OrderItem
 
@@ -71,8 +71,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if not change:
-            for field, profile in role_fields(request.user, "created_by_").items():
-                setattr(obj, field, profile)
+            stamp(obj, request.user, "created_by_")
         super().save_model(request, obj, form, change)
 
     def save_related(self, request, form, formsets, change):

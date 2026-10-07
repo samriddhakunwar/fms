@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Count, Q
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -54,15 +55,12 @@ class OrderViewSet(ActorMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
-        orders = Order.objects.all()
         return Response(
-            {
-                "total_orders": orders.count(),
-                "pending_orders": orders.filter(status=Order.Status.PENDING).count(),
-                "fulfilled_orders": orders.filter(
-                    status=Order.Status.FULFILLED
-                ).count(),
-            }
+            Order.objects.aggregate(
+                total_orders=Count("id"),
+                pending_orders=Count("id", filter=Q(status=Order.Status.PENDING)),
+                fulfilled_orders=Count("id", filter=Q(status=Order.Status.FULFILLED)),
+            )
         )
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdmin])
