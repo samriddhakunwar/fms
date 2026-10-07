@@ -55,18 +55,6 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.get_full_name()} ({self.username}) — {self.get_role_display()}"
 
-    @property
-    def is_admin(self):
-        return self.role == self.Role.ADMIN
-
-    @property
-    def is_manager(self):
-        return self.role == self.Role.MANAGER
-
-    @property
-    def is_staff_member(self):
-        return self.role == self.Role.STAFF
-
     def clean(self):
         super().clean()
         # A linked Staff record is the person's HR file; moving the account to

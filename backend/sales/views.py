@@ -22,7 +22,6 @@ class SaleViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     view_log_roles = (User.Role.MANAGER,)
     serializer_class = SaleSerializer
     permission_classes = [IsAdminOrManagerReadOnly]
-    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
     filter_backends = [filters.SearchFilter]
     search_fields = ["invoice_number", "sold_to"]
 

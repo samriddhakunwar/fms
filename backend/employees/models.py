@@ -124,7 +124,3 @@ class Staff(models.Model):
 
     def __str__(self):
         return f"{self.full_name} — {self.designation} ({self.get_status_display()})"
-
-    @property
-    def is_active(self) -> bool:
-        return self.status == self.Status.ACTIVE

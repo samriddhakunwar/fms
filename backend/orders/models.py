@@ -107,14 +107,11 @@ class Order(models.Model):
     def is_open(self) -> bool:
         return self.status in (self.Status.PENDING, self.Status.CONFIRMED)
 
-    def recalculate_total(self, save=True):
-        total = sum(
+    def recalculate_total(self):
+        self.total_amount = sum(
             (item.subtotal for item in self.items.all()), Decimal("0")
         )
-        self.total_amount = total
-        if save:
-            self.save(update_fields=["total_amount"])
-        return total
+        self.save(update_fields=["total_amount"])
 
 
 class OrderItem(models.Model):

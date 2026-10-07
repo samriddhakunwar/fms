@@ -44,10 +44,6 @@ class RoleAccountViewSet(viewsets.ModelViewSet):
             self.profile_attr
         )
 
-    def perform_destroy(self, instance):
-        # Deleting the login cascades to its Admin/Manager row.
-        instance.delete()
-
 
 class AdminAccountViewSet(RoleAccountViewSet):
     """Admin accounts (`user` + `admin`)."""
@@ -66,6 +62,7 @@ class AdminAccountViewSet(RoleAccountViewSet):
     def perform_destroy(self, instance):
         if instance == self.request.user:
             raise ValidationError({"detail": "You cannot delete your own account."})
+        # Deleting the login cascades to its Admin row.
         super().perform_destroy(instance)
 
 

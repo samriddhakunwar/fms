@@ -96,6 +96,25 @@ class SaleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Customer name is required.")
         return value
 
+    def _write_items(self, sale, items_data):
+        total = Decimal("0")
+        for item in items_data:
+            product = item["product"]
+            sale_item = SaleItem(
+                sale=sale,
+                product=product,
+                quantity=item["quantity"],
+                unit_price=product.selling_price,
+            )
+            try:
+                sale_item.save()
+            except ValueError as exc:
+                raise serializers.ValidationError(str(exc))
+            total += sale_item.subtotal
+
+        sale.total_amount = total
+        sale.save(update_fields=["total_amount"])
+
     def create(self, validated_data):
         items_data = validated_data.pop("items_input")
 
@@ -105,24 +124,7 @@ class SaleSerializer(serializers.ModelSerializer):
                 sold_to=validated_data["sold_to"],
                 created_by_admin=validated_data.get("created_by_admin"),
             )
-
-            total = Decimal("0")
-            for item in items_data:
-                product = item["product"]
-                sale_item = SaleItem(
-                    sale=sale,
-                    product=product,
-                    quantity=item["quantity"],
-                    unit_price=product.selling_price,
-                )
-                try:
-                    sale_item.save()
-                except ValueError as exc:
-                    raise serializers.ValidationError(str(exc))
-                total += sale_item.subtotal
-
-            sale.total_amount = total
-            sale.save(update_fields=["total_amount"])
+            self._write_items(sale, items_data)
 
         return sale
 
@@ -136,24 +138,7 @@ class SaleSerializer(serializers.ModelSerializer):
 
             if items_data is not None:
                 instance.items.all().delete()  # restores stock
-
-                total = Decimal("0")
-                for item in items_data:
-                    product = item["product"]
-                    sale_item = SaleItem(
-                        sale=instance,
-                        product=product,
-                        quantity=item["quantity"],
-                        unit_price=product.selling_price,
-                    )
-                    try:
-                        sale_item.save()
-                    except ValueError as exc:
-                        raise serializers.ValidationError(str(exc))
-                    total += sale_item.subtotal
-
-                instance.total_amount = total
-                instance.save(update_fields=["total_amount"])
+                self._write_items(instance, items_data)
 
         instance.refresh_from_db()
         return instance

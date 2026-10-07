@@ -66,10 +66,5 @@ class SalesReport(models.Model):
     def generated_by_name(self):
         return role_name(self.admin, self.manager)
 
-    @property
-    def generated_by_user(self):
-        profile = self.admin or self.manager
-        return profile.user if profile else None
-
     def __str__(self):
         return f"Sales report {self.start_date} – {self.end_date} ({self.generated_at:%Y-%m-%d %H:%M})"

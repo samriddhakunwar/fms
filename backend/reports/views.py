@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.utils import timezone
@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from accounts.permissions import IsAdminOrManager
 from fms.actor import role_fields
-from fms.dates import day_range_filter
+from fms.dates import day_range_filter, parse_day_param
 from sales.models import Sale
 
 from .models import SalesReport
@@ -17,15 +17,6 @@ from .serializers import SalesReportSerializer
 MAX_DAYS = 180
 
 DEFAULT_WINDOW_DAYS = 7
-
-
-def _parse_day(value, field):
-    if not value:
-        return None
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        raise ValueError(f"{field} must be a date in YYYY-MM-DD format.")
 
 
 def _money(value):
@@ -38,11 +29,8 @@ def sales_report(request):
     """Sales report for a date range."""
     today = timezone.localdate()
 
-    try:
-        start = _parse_day(request.query_params.get("start_date"), "start_date")
-        end = _parse_day(request.query_params.get("end_date"), "end_date")
-    except ValueError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    start = parse_day_param(request.query_params, "start_date")
+    end = parse_day_param(request.query_params, "end_date")
 
     if start is None and end is None:
         start = today - timedelta(days=DEFAULT_WINDOW_DAYS - 1)

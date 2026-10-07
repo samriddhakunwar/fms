@@ -17,13 +17,6 @@ class IsAdmin(BasePermission):
         return _role(request) == User.Role.ADMIN
 
 
-class IsManager(BasePermission):
-    message = "Only Manager users may perform this action."
-
-    def has_permission(self, request, view):
-        return _role(request) == User.Role.MANAGER
-
-
 class IsStaff(BasePermission):
     message = "Only Staff users may perform this action."
 
