@@ -32,7 +32,6 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ("status", "order_date")
     search_fields = ("order_number", "customer_name")
     ordering = ("-order_date",)
-    date_hierarchy = "order_date"
 
     readonly_fields = (
         "order_number",

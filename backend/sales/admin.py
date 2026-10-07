@@ -33,7 +33,6 @@ class SaleAdmin(admin.ModelAdmin):
     list_filter = ("sale_date",)
     search_fields = ("invoice_number", "sold_to")
     ordering = ("-sale_date",)
-    date_hierarchy = "sale_date"
     readonly_fields = (
         "invoice_number",
         "sale_date",

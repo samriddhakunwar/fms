@@ -23,4 +23,3 @@ class SalesReportAdmin(ReadOnlyAdmin):
     list_filter = ("generated_at",)
     search_fields = ("admin__user__username", "manager__user__username")
     ordering = ("-generated_at", "-id")
-    date_hierarchy = "generated_at"

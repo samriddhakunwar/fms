@@ -23,7 +23,7 @@ class UserAdmin(BaseUserAdmin):
         "date_joined",
     )
 
-    list_filter = ("role", "is_active", "is_staff")
+    list_filter = ("role", "is_active", "is_staff", "date_joined")
 
     search_fields = ("username", "first_name", "last_name", "email")
     ordering = ("date_joined",)
@@ -57,8 +57,6 @@ class UserAdmin(BaseUserAdmin):
     list_editable = ("is_active",)
 
     readonly_fields = ("date_joined", "last_login")
-
-    date_hierarchy = "date_joined"
 
 
 class ReadOnlyAdmin(admin.ModelAdmin):
@@ -253,4 +251,3 @@ class ActivityLogAdmin(ReadOnlyAdmin):
     list_filter = ("action", "role", "target", "created_at")
     search_fields = ("user__username", "target", "ip_address")
     ordering = ("-created_at", "-id")
-    date_hierarchy = "created_at"

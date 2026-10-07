@@ -50,8 +50,6 @@ class ProductAdmin(admin.ModelAdmin):
 
     ordering = ("product_name",)
 
-    date_hierarchy = "created_at"
-
     readonly_fields = (
         "created_by_admin",
         "created_by_manager",
@@ -176,4 +174,3 @@ class StockMovementAdmin(ReadOnlyAdmin):
     list_filter = ("movement_type", "created_at")
     search_fields = ("product__product_name", "product__sku", "reason", "sale__invoice_number")
     ordering = ("-created_at", "-id")
-    date_hierarchy = "created_at"
