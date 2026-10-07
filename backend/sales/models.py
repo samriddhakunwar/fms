@@ -7,8 +7,6 @@ from django.utils import timezone
 
 
 class Sale(models.Model):
-
-
     invoice_number = models.CharField(
         max_length=50,
         unique=True,
@@ -141,83 +139,49 @@ class SaleItem(models.Model):
             actor = self.sale.created_by_admin.user
         return actor
 
-    def _log_stock(self, product, change):
-        from inventory.models import StockMovement
+    def _move_stock(self, product_id, change, requested):
+        """
+        Lock the product, apply change (negative = units sold) and log it.
+        Raises ValueError, labelling the shortfall with `requested`, when
+        stock would go negative.
+        """
+        from inventory.models import Product, StockMovement
 
-        movement_type = (
-            StockMovement.MovementType.SALE
-            if change < 0
-            else StockMovement.MovementType.SALE_RETURN
-        )
+        product = Product.objects.select_for_update().get(pk=product_id)
+        if -change > product.quantity_in_stock:
+            raise ValueError(
+                f"Insufficient stock for '{product.product_name}'. "
+                f"{requested}: {-change}, "
+                f"Available: {product.quantity_in_stock}."
+            )
+        product.quantity_in_stock += change
+        product.save(update_fields=["quantity_in_stock", "updated_at"])
         StockMovement.record(
             product,
             change,
-            movement_type,
+            StockMovement.MovementType.SALE if change < 0 else StockMovement.MovementType.SALE_RETURN,
             self._stock_actor(),
             f"Invoice {self.sale.invoice_number}",
             self.sale,
         )
 
     def save(self, *args, **kwargs):
-        from inventory.models import Product
-
-        is_new = self.pk is None
-
         with transaction.atomic():
-            if is_new:
-                product = Product.objects.select_for_update().get(pk=self.product_id)
-
-                if self.quantity > product.quantity_in_stock:
-                    raise ValueError(
-                        f"Insufficient stock for '{product.product_name}'. "
-                        f"Requested: {self.quantity}, "
-                        f"Available: {product.quantity_in_stock}."
-                    )
-
-                self.subtotal = self.quantity * self.unit_price
-                product.quantity_in_stock -= self.quantity
-                product.save(update_fields=["quantity_in_stock", "updated_at"])
-                self._log_stock(product, -self.quantity)
+            if self.pk is None:
+                self._move_stock(self.product_id, -self.quantity, "Requested")
             else:
                 previous = SaleItem.objects.get(pk=self.pk)
-
                 if previous.product_id == self.product_id:
-                    product = Product.objects.select_for_update().get(pk=self.product_id)
-                    delta = self.quantity - previous.quantity  # + means selling more
-
-                    if delta > 0 and delta > product.quantity_in_stock:
-                        raise ValueError(
-                            f"Insufficient stock for '{product.product_name}'. "
-                            f"Additional units requested: {delta}, "
-                            f"Available: {product.quantity_in_stock}."
-                        )
-
-                    product.quantity_in_stock -= delta
-                    product.save(update_fields=["quantity_in_stock", "updated_at"])
-                    self._log_stock(product, -delta)
+                    self._move_stock(
+                        self.product_id,
+                        previous.quantity - self.quantity,
+                        "Additional units requested",
+                    )
                 else:
-                    old_product = Product.objects.select_for_update().get(
-                        pk=previous.product_id
-                    )
-                    old_product.quantity_in_stock += previous.quantity
-                    old_product.save(update_fields=["quantity_in_stock", "updated_at"])
-                    self._log_stock(old_product, previous.quantity)
+                    self._move_stock(previous.product_id, previous.quantity, "Requested")
+                    self._move_stock(self.product_id, -self.quantity, "Requested")
 
-                    new_product = Product.objects.select_for_update().get(
-                        pk=self.product_id
-                    )
-                    if self.quantity > new_product.quantity_in_stock:
-                        raise ValueError(
-                            f"Insufficient stock for '{new_product.product_name}'. "
-                            f"Requested: {self.quantity}, "
-                            f"Available: {new_product.quantity_in_stock}."
-                        )
-                    new_product.quantity_in_stock -= self.quantity
-                    new_product.save(update_fields=["quantity_in_stock", "updated_at"])
-                    self._log_stock(new_product, -self.quantity)
-
-                self.subtotal = self.quantity * self.unit_price
-
+            self.subtotal = self.quantity * self.unit_price
             super().save(*args, **kwargs)
 
 

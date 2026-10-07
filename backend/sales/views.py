@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.utils import timezone
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
@@ -50,11 +50,9 @@ class SaleViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def summary(self, request):
         today = timezone.localdate()
-        todays_sales = Sale.objects.filter(**day_range_filter("sale_date", today, today))
-        revenue = todays_sales.aggregate(total=Sum("total_amount"))["total"] or 0
+        totals = Sale.objects.filter(**day_range_filter("sale_date", today, today)).aggregate(
+            count=Count("id"), revenue=Sum("total_amount")
+        )
         return Response(
-            {
-                "todays_sales": todays_sales.count(),
-                "todays_revenue": revenue,
-            }
+            {"todays_sales": totals["count"], "todays_revenue": totals["revenue"] or 0}
         )

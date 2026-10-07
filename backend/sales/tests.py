@@ -142,6 +142,30 @@ class SaleApiTests(APITestCase):
         self.chair.refresh_from_db()
         self.assertEqual(self.chair.quantity_in_stock, 45)  # unchanged
 
+    def test_sale_item_stock_messages_and_product_swap(self):
+        sale = Sale.objects.create(invoice_number="INV-T1", sold_to="Shyam")
+        with self.assertRaisesMessage(
+            ValueError, "Insufficient stock for 'Table'. Requested: 11, Available: 10."
+        ):
+            SaleItem(sale=sale, product=self.table, quantity=11, unit_price=1).save()
+
+        item = SaleItem(sale=sale, product=self.chair, quantity=5, unit_price=1)
+        item.save()
+        item.quantity = 51
+        with self.assertRaisesMessage(
+            ValueError,
+            "Insufficient stock for 'Chair'. Additional units requested: 46, Available: 45.",
+        ):
+            item.save()
+
+        item.quantity = 4
+        item.product = self.table  # chair gets its 5 back, table gives up 4
+        item.save()
+        self.chair.refresh_from_db()
+        self.table.refresh_from_db()
+        self.assertEqual((self.chair.quantity_in_stock, self.table.quantity_in_stock), (50, 6))
+        self.assertEqual(item.subtotal, 4)
+
     def test_search_by_invoice_number(self):
         self._login_admin()
         payload = {"sold_to": "Shyam Pvt. Ltd.", "items_input": [{"product": self.chair.id, "quantity": 1}]}
