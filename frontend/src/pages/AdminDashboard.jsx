@@ -3,7 +3,7 @@ import api from "../services/api";
 
 import ChartCard from "../charts/ChartCard";
 import DonutChart from "../charts/DonutChart";
-import { TrendBarChart, TrendLineChart } from "../charts/TrendChart";
+import SalesCharts from "../charts/SalesCharts";
 import {
   countByField,
   dailySalesSeries,
@@ -14,11 +14,6 @@ const STAFF_STATUS_LABELS = {
   ACTIVE: "Active",
   INACTIVE: "Inactive",
 };
-
-const money = (value) => `Rs ${Number(value).toLocaleString()}`;
-
-const moneyTick = (value) =>
-  value >= 1000 ? `Rs ${Math.round(value / 1000)}k` : `Rs ${value}`;
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -60,8 +55,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     (async () => {
-      setChartsLoading(true);
-      setChartsError("");
       try {
         const [products, staff, sales] = await Promise.all([
           api.get("/products/"),
@@ -89,7 +82,6 @@ export default function AdminDashboard() {
     { label: "Today's Revenue", value: stats.todays_revenue },
   ];
 
-  const hasSales = charts.sales.some((day) => day.count > 0);
   const chartState = { loading: chartsLoading, error: chartsError };
 
   return (
@@ -133,35 +125,12 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="row g-3">
-        <div className="col-12 col-lg-6">
-          <ChartCard
-            title="Revenue"
-            subtitle="Last 7 days"
-            {...chartState}
-            empty={!hasSales}
-          >
-            <TrendBarChart
-              data={charts.sales}
-              xKey="label"
-              yKey="revenue"
-              formatValue={money}
-              formatTick={moneyTick}
-            />
-          </ChartCard>
-        </div>
-
-        <div className="col-12 col-lg-6">
-          <ChartCard
-            title="Sales Volume"
-            subtitle="Number of sales, last 7 days"
-            {...chartState}
-            empty={!hasSales}
-          >
-            <TrendLineChart data={charts.sales} xKey="label" yKey="count" />
-          </ChartCard>
-        </div>
-      </div>
+      <SalesCharts
+        series={charts.sales}
+        subtitle="Last 7 days"
+        volumeSubtitle="Number of sales, last 7 days"
+        {...chartState}
+      />
     </>
   );
 }

@@ -9,7 +9,7 @@ import {
 
 import { INK, MARK, TOOLTIP_PROPS } from "./theme";
 
-export default function DonutChart({ data, height = 260, valueSuffix = "" }) {
+export default function DonutChart({ data, height = 260 }) {
   const total = data.reduce((sum, slice) => sum + slice.value, 0);
 
   const renderLabel = ({ cx, cy, midAngle, outerRadius, value }) => {
@@ -62,7 +62,7 @@ export default function DonutChart({ data, height = 260, valueSuffix = "" }) {
           {...TOOLTIP_PROPS}
           cursor={false}
           formatter={(value, name) => [
-            `${value}${valueSuffix} (${total ? Math.round((value / total) * 100) : 0}%)`,
+            `${value} (${total ? Math.round((value / total) * 100) : 0}%)`,
             name,
           ]}
         />

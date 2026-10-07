@@ -15,8 +15,6 @@ export default function StaffDashboard() {
 
   useEffect(() => {
     (async () => {
-      setLoading(true);
-      setError("");
       try {
         const { data } = await api.get("/products/");
         setStock(stockStatusBreakdown(data));

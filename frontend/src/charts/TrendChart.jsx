@@ -49,7 +49,7 @@ export function TrendBarChart({
   );
 }
 
-export function TrendLineChart({ data, xKey, yKey, height = 240, formatValue }) {
+export function TrendLineChart({ data, xKey, yKey, height = 240 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
@@ -60,12 +60,11 @@ export function TrendLineChart({ data, xKey, yKey, height = 240, formatValue }) 
           axisLine={false}
           width={44}
           allowDecimals={false}
-          tickFormatter={formatValue}
         />
         <Tooltip
           {...TOOLTIP_PROPS}
           cursor={{ stroke: INK.grid, strokeWidth: 1 }}
-          formatter={(value) => [formatValue ? formatValue(value) : value, ""]}
+          formatter={(value) => [value, ""]}
         />
         <Line
           type="linear"

@@ -30,8 +30,6 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     (async () => {
-      setChartsLoading(true);
-      setChartsError("");
       try {
         const { data } = await api.get("/products/");
         setCharts({

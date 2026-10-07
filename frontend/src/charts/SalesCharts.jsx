@@ -9,6 +9,7 @@ const moneyTick = (value) =>
 export default function SalesCharts({
   series,
   subtitle,
+  volumeSubtitle = subtitle,
   loading,
   error,
   emptyMessage,
@@ -31,7 +32,7 @@ export default function SalesCharts({
       </div>
 
       <div className="col-12 col-lg-6">
-        <ChartCard title="Sales Volume" subtitle={subtitle} {...state}>
+        <ChartCard title="Sales Volume" subtitle={volumeSubtitle} {...state}>
           <TrendLineChart data={series} xKey="label" yKey="count" />
         </ChartCard>
       </div>
