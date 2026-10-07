@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import SalesCharts from "../../charts/SalesCharts";
+import { StatusRow } from "../../components/ui";
 import { labelDays } from "../../charts/aggregate";
 import api, { getErrorMessage } from "../../services/api";
 
@@ -210,19 +211,10 @@ export default function SalesReport() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-4">
-                      Loading…
-                    </td>
-                  </tr>
-                ) : report.products.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-4 text-muted">
-                      No products sold in this period.
-                    </td>
-                  </tr>
-                ) : (
+                <StatusRow loading={loading} empty={report.products.length === 0} colSpan={4}>
+                  No products sold in this period.
+                </StatusRow>
+                {!loading &&
                   report.products.map((product) => (
                     <tr key={product.product_id}>
                       <td>{product.product_name}</td>
@@ -230,8 +222,7 @@ export default function SalesReport() {
                       <td className="text-end">{product.quantity}</td>
                       <td className="text-end">{money(product.revenue)}</td>
                     </tr>
-                  ))
-                )}
+                  ))}
               </tbody>
             </table>
           </div>

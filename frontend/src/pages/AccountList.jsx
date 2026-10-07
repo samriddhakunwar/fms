@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { ConfirmModal, FieldError, Modal, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
-import api, { getErrorMessage } from "../services/api";
+import api, { formErrorsFrom, getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
   username: "",
@@ -51,24 +52,21 @@ export default function AccountList({ kind }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
-  const openAddForm = () => {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormErrors({});
-    setShowForm(true);
-  };
-
-  const openEditForm = (user) => {
-    setEditingId(user.id);
-    setForm({
-      username: user.username,
-      password: "",
-      first_name: user.first_name || "",
-      last_name: user.last_name || "",
-      email: user.email || "",
-      phone_number: user.phone_number || "",
-      is_active: user.is_active,
-    });
+  const openForm = (user) => {
+    setEditingId(user?.id ?? null);
+    setForm(
+      user
+        ? {
+            username: user.username,
+            password: "",
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            email: user.email || "",
+            phone_number: user.phone_number || "",
+            is_active: user.is_active,
+          }
+        : EMPTY_FORM
+    );
     setFormErrors({});
     setShowForm(true);
   };
@@ -95,18 +93,13 @@ export default function AccountList({ kind }) {
       setShowForm(false);
       await loadUsers();
     } catch (err) {
-      if (err.response?.status === 400 && err.response.data) {
-        setFormErrors(err.response.data);
-      } else {
-        setFormErrors({ non_field_errors: [getErrorMessage(err)] });
-      }
+      setFormErrors(formErrorsFrom(err));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
     try {
       await api.delete(`${endpoint}${deleteTarget.id}/`);
       setDeleteTarget(null);
@@ -121,7 +114,7 @@ export default function AccountList({ kind }) {
     <>
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 className="mb-0">{title}</h2>
-        <button className="btn btn-primary" onClick={openAddForm}>
+        <button className="btn btn-primary" onClick={() => openForm()}>
           + Add {noun}
         </button>
       </div>
@@ -145,19 +138,10 @@ export default function AccountList({ kind }) {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="text-center py-4">
-                  Loading…
-                </td>
-              </tr>
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-4 text-muted">
-                  No {title.toLowerCase()} found.
-                </td>
-              </tr>
-            ) : (
+            <StatusRow loading={loading} empty={users.length === 0} colSpan={6}>
+              No {title.toLowerCase()} found.
+            </StatusRow>
+            {!loading &&
               users.map((user) => (
                 <tr key={user.id}>
                   <td>{user.username}</td>
@@ -174,7 +158,7 @@ export default function AccountList({ kind }) {
                   <td className="text-nowrap">
                     <button
                       className="btn btn-sm btn-outline-primary me-2"
-                      onClick={() => openEditForm(user)}
+                      onClick={() => openForm(user)}
                     >
                       Edit
                     </button>
@@ -188,174 +172,114 @@ export default function AccountList({ kind }) {
                     )}
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
           </tbody>
         </table>
       </div>
 
       {showForm && (
-        <>
-          <div className="modal d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog" role="document">
-              <div className="modal-content">
-                <form onSubmit={handleFormSubmit}>
-                  <div className="modal-header">
-                    <h5 className="modal-title">
-                      {editingId ? `Edit ${noun}` : `Add ${noun}`}
-                    </h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      onClick={() => setShowForm(false)}
-                      aria-label="Close"
-                    />
-                  </div>
-                  <div className="modal-body">
-                    {formErrors.non_field_errors && (
-                      <div className="alert alert-danger py-2">
-                        {formErrors.non_field_errors[0]}
-                      </div>
-                    )}
+        <Modal
+          title={editingId ? `Edit ${noun}` : `Add ${noun}`}
+          onClose={() => setShowForm(false)}
+          onSubmit={handleFormSubmit}
+          saving={saving}
+          submitLabel={saving ? "Saving…" : "Save"}
+        >
+          {formErrors.non_field_errors && (
+            <div className="alert alert-danger py-2">
+              {formErrors.non_field_errors[0]}
+            </div>
+          )}
 
-                    <div className="mb-3">
-                      <label className="form-label">Username</label>
-                      <input
-                        className="form-control"
-                        value={form.username}
-                        onChange={handleFormChange("username")}
-                        disabled={!!editingId}
-                        required
-                      />
-                      {formErrors.username && (
-                        <div className="text-danger small">{formErrors.username[0]}</div>
-                      )}
-                    </div>
+          <div className="mb-3">
+            <label className="form-label">Username</label>
+            <input
+              className="form-control"
+              value={form.username}
+              onChange={handleFormChange("username")}
+              disabled={!!editingId}
+              required
+            />
+            <FieldError errors={formErrors.username} />
+          </div>
 
-                    <div className="mb-3">
-                      <label className="form-label">
-                        Password {editingId && <span className="text-muted">(leave blank to keep current)</span>}
-                      </label>
-                      <input
-                        type="password"
-                        className="form-control"
-                        value={form.password}
-                        onChange={handleFormChange("password")}
-                        required={!editingId}
-                      />
-                      {formErrors.password && (
-                        <div className="text-danger small">{formErrors.password[0]}</div>
-                      )}
-                    </div>
+          <div className="mb-3">
+            <label className="form-label">
+              Password {editingId && <span className="text-muted">(leave blank to keep current)</span>}
+            </label>
+            <input
+              type="password"
+              className="form-control"
+              value={form.password}
+              onChange={handleFormChange("password")}
+              required={!editingId}
+            />
+            <FieldError errors={formErrors.password} />
+          </div>
 
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">First Name</label>
-                        <input
-                          className="form-control"
-                          value={form.first_name}
-                          onChange={handleFormChange("first_name")}
-                        />
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Last Name</label>
-                        <input
-                          className="form-control"
-                          value={form.last_name}
-                          onChange={handleFormChange("last_name")}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Email</label>
-                        <input
-                          type="email"
-                          className="form-control"
-                          value={form.email}
-                          onChange={handleFormChange("email")}
-                        />
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Phone</label>
-                        <input
-                          className="form-control"
-                          value={form.phone_number}
-                          onChange={handleFormChange("phone_number")}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label">Status</label>
-                      <select
-                        className="form-select"
-                        value={String(form.is_active)}
-                        onChange={handleFormChange("is_active")}
-                      >
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                      </select>
-                      {formErrors.is_active && (
-                        <div className="text-danger small">{formErrors.is_active[0]}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="modal-footer">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setShowForm(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                      {saving ? "Saving…" : "Save"}
-                    </button>
-                  </div>
-                </form>
-              </div>
+          <div className="row">
+            <div className="col-6 mb-3">
+              <label className="form-label">First Name</label>
+              <input
+                className="form-control"
+                value={form.first_name}
+                onChange={handleFormChange("first_name")}
+              />
+            </div>
+            <div className="col-6 mb-3">
+              <label className="form-label">Last Name</label>
+              <input
+                className="form-control"
+                value={form.last_name}
+                onChange={handleFormChange("last_name")}
+              />
             </div>
           </div>
-          <div className="modal-backdrop show" />
-        </>
+
+          <div className="row">
+            <div className="col-6 mb-3">
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                className="form-control"
+                value={form.email}
+                onChange={handleFormChange("email")}
+              />
+            </div>
+            <div className="col-6 mb-3">
+              <label className="form-label">Phone</label>
+              <input
+                className="form-control"
+                value={form.phone_number}
+                onChange={handleFormChange("phone_number")}
+              />
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Status</label>
+            <select
+              className="form-select"
+              value={String(form.is_active)}
+              onChange={handleFormChange("is_active")}
+            >
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+            <FieldError errors={formErrors.is_active} />
+          </div>
+        </Modal>
       )}
 
       {deleteTarget && (
-        <>
-          <div className="modal d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog" role="document">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Delete {noun}</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setDeleteTarget(null)}
-                    aria-label="Close"
-                  />
-                </div>
-                <div className="modal-body">
-                  Are you sure you want to delete{" "}
-                  <strong>{deleteTarget.username}</strong>? This cannot be undone.
-                </div>
-                <div className="modal-footer">
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setDeleteTarget(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button className="btn btn-danger" onClick={confirmDelete}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="modal-backdrop show" />
-        </>
+        <ConfirmModal
+          title={`Delete ${noun}`}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        >
+          Are you sure you want to delete{" "}
+          <strong>{deleteTarget.username}</strong>? This cannot be undone.
+        </ConfirmModal>
       )}
     </>
   );

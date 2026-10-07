@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { ConfirmModal, FieldError, Modal, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
-import api, { getErrorMessage } from "../services/api";
+import api, { formErrorsFrom, getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
   product_name: "",
@@ -58,23 +59,20 @@ export default function ProductList() {
     loadProducts(search);
   };
 
-  const openAddForm = () => {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormErrors({});
-    setShowForm(true);
-  };
-
-  const openEditForm = (product) => {
-    setEditingId(product.id);
-    setForm({
-      product_name: product.product_name,
-      description: product.description || "",
-      sku: product.sku,
-      selling_price: product.selling_price,
-      quantity_in_stock: product.quantity_in_stock,
-      minimum_stock_level: product.minimum_stock_level,
-    });
+  const openForm = (product) => {
+    setEditingId(product?.id ?? null);
+    setForm(
+      product
+        ? {
+            product_name: product.product_name,
+            description: product.description || "",
+            sku: product.sku,
+            selling_price: product.selling_price,
+            quantity_in_stock: product.quantity_in_stock,
+            minimum_stock_level: product.minimum_stock_level,
+          }
+        : EMPTY_FORM
+    );
     setFormErrors({});
     setShowForm(true);
   };
@@ -99,18 +97,13 @@ export default function ProductList() {
       setShowForm(false);
       await loadProducts(search);
     } catch (err) {
-      if (err.response?.status === 400 && err.response.data) {
-        setFormErrors(err.response.data);
-      } else {
-        setFormErrors({ non_field_errors: [getErrorMessage(err)] });
-      }
+      setFormErrors(formErrorsFrom(err));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
     try {
       await api.delete(`/products/${deleteTarget.id}/`);
       setDeleteTarget(null);
@@ -126,7 +119,7 @@ export default function ProductList() {
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Inventory</h2>
         {canManage && (
-          <button className="btn btn-primary" onClick={openAddForm}>
+          <button className="btn btn-primary" onClick={() => openForm()}>
             + Add Product
           </button>
         )}
@@ -169,19 +162,10 @@ export default function ProductList() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={canManage ? 7 : 6} className="text-center py-4">
-                  Loading…
-                </td>
-              </tr>
-            ) : products.length === 0 ? (
-              <tr>
-                <td colSpan={canManage ? 7 : 6} className="text-center py-4 text-muted">
-                  No products found.
-                </td>
-              </tr>
-            ) : (
+            <StatusRow loading={loading} empty={products.length === 0} colSpan={canManage ? 7 : 6}>
+              No products found.
+            </StatusRow>
+            {!loading &&
               products.map((product) => {
                 const badge = STATUS_BADGE[product.stock_status] || STATUS_BADGE.IN_STOCK;
                 return (
@@ -198,7 +182,7 @@ export default function ProductList() {
                       <td className="text-nowrap">
                         <button
                           className="btn btn-sm btn-outline-primary me-2"
-                          onClick={() => openEditForm(product)}
+                          onClick={() => openForm(product)}
                         >
                           Edit
                         </button>
@@ -212,164 +196,104 @@ export default function ProductList() {
                     )}
                   </tr>
                 );
-              })
-            )}
+              })}
           </tbody>
         </table>
       </div>
 
       {showForm && (
-        <>
-          <div className="modal d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog" role="document">
-              <div className="modal-content">
-                <form onSubmit={handleFormSubmit}>
-                  <div className="modal-header">
-                    <h5 className="modal-title">
-                      {editingId ? "Edit Product" : "Add Product"}
-                    </h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      onClick={closeForm}
-                      aria-label="Close"
-                    />
-                  </div>
-                  <div className="modal-body">
-                    {formErrors.non_field_errors && (
-                      <div className="alert alert-danger py-2">
-                        {formErrors.non_field_errors[0]}
-                      </div>
-                    )}
+        <Modal
+          title={editingId ? "Edit Product" : "Add Product"}
+          onClose={closeForm}
+          onSubmit={handleFormSubmit}
+          saving={saving}
+          submitLabel={saving ? "Saving…" : "Save"}
+        >
+          {formErrors.non_field_errors && (
+            <div className="alert alert-danger py-2">{formErrors.non_field_errors[0]}</div>
+          )}
 
-                    <div className="mb-3">
-                      <label className="form-label">Product Name</label>
-                      <input
-                        className="form-control"
-                        value={form.product_name}
-                        onChange={handleFormChange("product_name")}
-                        required
-                      />
-                      {formErrors.product_name && (
-                        <div className="text-danger small">{formErrors.product_name[0]}</div>
-                      )}
-                    </div>
+          <div className="mb-3">
+            <label className="form-label">Product Name</label>
+            <input
+              className="form-control"
+              value={form.product_name}
+              onChange={handleFormChange("product_name")}
+              required
+            />
+            <FieldError errors={formErrors.product_name} />
+          </div>
 
-                    <div className="mb-3">
-                      <label className="form-label">SKU</label>
-                      <input
-                        className="form-control"
-                        value={form.sku}
-                        onChange={handleFormChange("sku")}
-                        required
-                      />
-                      {formErrors.sku && (
-                        <div className="text-danger small">{formErrors.sku[0]}</div>
-                      )}
-                    </div>
+          <div className="mb-3">
+            <label className="form-label">SKU</label>
+            <input
+              className="form-control"
+              value={form.sku}
+              onChange={handleFormChange("sku")}
+              required
+            />
+            <FieldError errors={formErrors.sku} />
+          </div>
 
-                    <div className="mb-3">
-                      <label className="form-label">Description</label>
-                      <textarea
-                        className="form-control"
-                        rows={2}
-                        value={form.description}
-                        onChange={handleFormChange("description")}
-                      />
-                    </div>
+          <div className="mb-3">
+            <label className="form-label">Description</label>
+            <textarea
+              className="form-control"
+              rows={2}
+              value={form.description}
+              onChange={handleFormChange("description")}
+            />
+          </div>
 
-                    <div className="row">
-                      <div className="col-4 mb-3">
-                        <label className="form-label">Selling Price</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="form-control"
-                          value={form.selling_price}
-                          onChange={handleFormChange("selling_price")}
-                          required
-                        />
-                        {formErrors.selling_price && (
-                          <div className="text-danger small">
-                            {formErrors.selling_price[0]}
-                          </div>
-                        )}
-                      </div>
-                      <div className="col-4 mb-3">
-                        <label className="form-label">Stock Qty</label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="form-control"
-                          value={form.quantity_in_stock}
-                          onChange={handleFormChange("quantity_in_stock")}
-                          required
-                        />
-                      </div>
-                      <div className="col-4 mb-3">
-                        <label className="form-label">Min Stock</label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="form-control"
-                          value={form.minimum_stock_level}
-                          onChange={handleFormChange("minimum_stock_level")}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="modal-footer">
-                    <button type="button" className="btn btn-secondary" onClick={closeForm}>
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                      {saving ? "Saving…" : "Save"}
-                    </button>
-                  </div>
-                </form>
-              </div>
+          <div className="row">
+            <div className="col-4 mb-3">
+              <label className="form-label">Selling Price</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-control"
+                value={form.selling_price}
+                onChange={handleFormChange("selling_price")}
+                required
+              />
+              <FieldError errors={formErrors.selling_price} />
+            </div>
+            <div className="col-4 mb-3">
+              <label className="form-label">Stock Qty</label>
+              <input
+                type="number"
+                min="0"
+                className="form-control"
+                value={form.quantity_in_stock}
+                onChange={handleFormChange("quantity_in_stock")}
+                required
+              />
+            </div>
+            <div className="col-4 mb-3">
+              <label className="form-label">Min Stock</label>
+              <input
+                type="number"
+                min="0"
+                className="form-control"
+                value={form.minimum_stock_level}
+                onChange={handleFormChange("minimum_stock_level")}
+                required
+              />
             </div>
           </div>
-          <div className="modal-backdrop show" />
-        </>
+        </Modal>
       )}
 
       {deleteTarget && (
-        <>
-          <div className="modal d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog" role="document">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Delete Product</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setDeleteTarget(null)}
-                    aria-label="Close"
-                  />
-                </div>
-                <div className="modal-body">
-                  Are you sure you want to delete{" "}
-                  <strong>{deleteTarget.product_name}</strong>? This cannot be undone.
-                </div>
-                <div className="modal-footer">
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setDeleteTarget(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button className="btn btn-danger" onClick={confirmDelete}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="modal-backdrop show" />
-        </>
+        <ConfirmModal
+          title="Delete Product"
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        >
+          Are you sure you want to delete{" "}
+          <strong>{deleteTarget.product_name}</strong>? This cannot be undone.
+        </ConfirmModal>
       )}
     </>
   );

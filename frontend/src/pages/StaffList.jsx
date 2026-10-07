@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { ConfirmModal, FieldError, Modal, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
-import api, { getErrorMessage } from "../services/api";
+import api, { formErrorsFrom, getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
   user: "",
@@ -72,27 +73,24 @@ export default function StaffList() {
     loadStaff(params);
   };
 
-  const openAddForm = () => {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormErrors({});
-    setShowForm(true);
-  };
-
-  const openEditForm = (member) => {
-    setEditingId(member.id);
-    setForm({
-      ...EMPTY_FORM,
-      user: member.user ?? "",
-      full_name: member.full_name,
-      email: member.email || "",
-      phone: member.phone || "",
-      address: member.address || "",
-      designation: member.designation,
-      joining_date: member.joining_date,
-      salary: member.salary,
-      status: member.status,
-    });
+  const openForm = (member) => {
+    setEditingId(member?.id ?? null);
+    setForm(
+      member
+        ? {
+            ...EMPTY_FORM,
+            user: member.user ?? "",
+            full_name: member.full_name,
+            email: member.email || "",
+            phone: member.phone || "",
+            address: member.address || "",
+            designation: member.designation,
+            joining_date: member.joining_date,
+            salary: member.salary,
+            status: member.status,
+          }
+        : EMPTY_FORM
+    );
     setFormErrors({});
     setShowForm(true);
   };
@@ -120,18 +118,13 @@ export default function StaffList() {
       await loadStaff();
       if (form.user === NEW_LOGIN) loadAccounts();
     } catch (err) {
-      if (err.response?.status === 400 && err.response.data) {
-        setFormErrors(err.response.data);
-      } else {
-        setFormErrors({ non_field_errors: [getErrorMessage(err)] });
-      }
+      setFormErrors(formErrorsFrom(err));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
     try {
       await api.delete(`/staff/${deleteTarget.id}/`);
       setDeleteTarget(null);
@@ -147,7 +140,7 @@ export default function StaffList() {
       <div className="page-head d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Staff</h2>
         {canManage && (
-          <button className="btn btn-primary" onClick={openAddForm}>
+          <button className="btn btn-primary" onClick={() => openForm()}>
             + Add Staff
           </button>
         )}
@@ -201,22 +194,10 @@ export default function StaffList() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={canManage ? 7 : 6} className="text-center py-4">
-                  Loading…
-                </td>
-              </tr>
-            ) : staff.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={canManage ? 7 : 6}
-                  className="text-center py-4 text-muted"
-                >
-                  No staff found.
-                </td>
-              </tr>
-            ) : (
+            <StatusRow loading={loading} empty={staff.length === 0} colSpan={canManage ? 7 : 6}>
+              No staff found.
+            </StatusRow>
+            {!loading &&
               staff.map((member) => (
                 <tr key={member.id}>
                   <td>{member.full_name}</td>
@@ -237,7 +218,7 @@ export default function StaffList() {
                     <td className="text-nowrap">
                       <button
                         className="btn btn-sm btn-outline-primary me-2"
-                        onClick={() => openEditForm(member)}
+                        onClick={() => openForm(member)}
                       >
                         Edit
                       </button>
@@ -250,261 +231,191 @@ export default function StaffList() {
                     </td>
                   )}
                 </tr>
-              ))
-            )}
+              ))}
           </tbody>
         </table>
       </div>
 
       {showForm && (
-        <>
-          <div className="modal d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog" role="document">
-              <div className="modal-content">
-                <form onSubmit={handleFormSubmit}>
-                  <div className="modal-header">
-                    <h5 className="modal-title">
-                      {editingId ? "Edit Staff" : "Add Staff"}
-                    </h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      onClick={() => setShowForm(false)}
-                      aria-label="Close"
-                    />
-                  </div>
-                  <div className="modal-body">
-                    {formErrors.non_field_errors && (
-                      <div className="alert alert-danger py-2">
-                        {formErrors.non_field_errors[0]}
-                      </div>
-                    )}
+        <Modal
+          title={editingId ? "Edit Staff" : "Add Staff"}
+          onClose={() => setShowForm(false)}
+          onSubmit={handleFormSubmit}
+          saving={saving}
+          submitLabel={saving ? "Saving…" : "Save"}
+        >
+          {formErrors.non_field_errors && (
+            <div className="alert alert-danger py-2">
+              {formErrors.non_field_errors[0]}
+            </div>
+          )}
 
-                    <div className="mb-3">
-                      <label className="form-label">Full Name</label>
-                      <input
-                        className="form-control"
-                        value={form.full_name}
-                        onChange={handleFormChange("full_name")}
-                        required
-                      />
-                      {formErrors.full_name && (
-                        <div className="text-danger small">{formErrors.full_name[0]}</div>
-                      )}
-                    </div>
+          <div className="mb-3">
+            <label className="form-label">Full Name</label>
+            <input
+              className="form-control"
+              value={form.full_name}
+              onChange={handleFormChange("full_name")}
+              required
+            />
+            <FieldError errors={formErrors.full_name} />
+          </div>
 
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Email</label>
-                        <input
-                          type="email"
-                          className="form-control"
-                          value={form.email}
-                          onChange={handleFormChange("email")}
-                        />
-                        {formErrors.email && (
-                          <div className="text-danger small">{formErrors.email[0]}</div>
-                        )}
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Phone</label>
-                        <input
-                          className="form-control"
-                          value={form.phone}
-                          onChange={handleFormChange("phone")}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label">Address</label>
-                      <textarea
-                        className="form-control"
-                        rows={2}
-                        value={form.address}
-                        onChange={handleFormChange("address")}
-                      />
-                    </div>
-
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Designation</label>
-                        <input
-                          className="form-control"
-                          value={form.designation}
-                          onChange={handleFormChange("designation")}
-                          required
-                        />
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Joining Date</label>
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={form.joining_date}
-                          onChange={handleFormChange("joining_date")}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="row">
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Salary</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="9999999999.99"
-                          className="form-control"
-                          value={form.salary}
-                          onChange={handleFormChange("salary")}
-                          required
-                        />
-                        {formErrors.salary && (
-                          <div className="text-danger small">{formErrors.salary[0]}</div>
-                        )}
-                      </div>
-                      <div className="col-6 mb-3">
-                        <label className="form-label">Status</label>
-                        <select
-                          className="form-select"
-                          value={form.status}
-                          onChange={handleFormChange("status")}
-                        >
-                          <option value="ACTIVE">Active</option>
-                          <option value="INACTIVE">Inactive</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label">Login Account</label>
-                      <select
-                        className="form-select"
-                        value={form.user ?? ""}
-                        onChange={handleFormChange("user")}
-                      >
-                        <option value="">No linked account</option>
-                        <option value={NEW_LOGIN}>+ Create new login…</option>
-                        {accounts
-                          .filter(
-                            (account) =>
-                              !staff.some(
-                                (other) => other.user === account.id && other.id !== editingId
-                              )
-                          )
-                          .map((account) => (
-                            <option value={account.id} key={account.id}>
-                              {account.username}
-                              {account.first_name || account.last_name
-                                ? ` — ${account.first_name} ${account.last_name}`.trimEnd()
-                                : ""}
-                            </option>
-                          ))}
-                      </select>
-                      <div className="form-text">
-                        Only Staff logins can be linked. Linking one lets that
-                        person see this record on their own profile page.
-                        Optional.
-                      </div>
-                      {formErrors.user && (
-                        <div className="text-danger small">{formErrors.user[0]}</div>
-                      )}
-                    </div>
-
-                    {form.user === NEW_LOGIN && (
-                      <div className="border rounded p-3 mb-3">
-                        <div className="mb-3">
-                          <label className="form-label">Username</label>
-                          <input
-                            className="form-control"
-                            value={form.login_username}
-                            onChange={handleFormChange("login_username")}
-                            autoComplete="off"
-                            required
-                          />
-                          {formErrors.login_username && (
-                            <div className="text-danger small">
-                              {formErrors.login_username[0]}
-                            </div>
-                          )}
-                        </div>
-                        <label className="form-label">Password</label>
-                        <input
-                          type="password"
-                          className="form-control"
-                          value={form.login_password}
-                          onChange={handleFormChange("login_password")}
-                          autoComplete="new-password"
-                          required
-                        />
-                        {formErrors.login_password && (
-                          <div className="text-danger small">
-                            {formErrors.login_password[0]}
-                          </div>
-                        )}
-                        <div className="form-text">
-                          Creates a Staff login. Name, email and phone are copied
-                          from this record.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="modal-footer">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setShowForm(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                      {saving ? "Saving…" : "Save"}
-                    </button>
-                  </div>
-                </form>
-              </div>
+          <div className="row">
+            <div className="col-6 mb-3">
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                className="form-control"
+                value={form.email}
+                onChange={handleFormChange("email")}
+              />
+              <FieldError errors={formErrors.email} />
+            </div>
+            <div className="col-6 mb-3">
+              <label className="form-label">Phone</label>
+              <input
+                className="form-control"
+                value={form.phone}
+                onChange={handleFormChange("phone")}
+              />
             </div>
           </div>
-          <div className="modal-backdrop show" />
-        </>
+
+          <div className="mb-3">
+            <label className="form-label">Address</label>
+            <textarea
+              className="form-control"
+              rows={2}
+              value={form.address}
+              onChange={handleFormChange("address")}
+            />
+          </div>
+
+          <div className="row">
+            <div className="col-6 mb-3">
+              <label className="form-label">Designation</label>
+              <input
+                className="form-control"
+                value={form.designation}
+                onChange={handleFormChange("designation")}
+                required
+              />
+            </div>
+            <div className="col-6 mb-3">
+              <label className="form-label">Joining Date</label>
+              <input
+                type="date"
+                className="form-control"
+                value={form.joining_date}
+                onChange={handleFormChange("joining_date")}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-6 mb-3">
+              <label className="form-label">Salary</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="9999999999.99"
+                className="form-control"
+                value={form.salary}
+                onChange={handleFormChange("salary")}
+                required
+              />
+              <FieldError errors={formErrors.salary} />
+            </div>
+            <div className="col-6 mb-3">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={form.status}
+                onChange={handleFormChange("status")}
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Login Account</label>
+            <select
+              className="form-select"
+              value={form.user ?? ""}
+              onChange={handleFormChange("user")}
+            >
+              <option value="">No linked account</option>
+              <option value={NEW_LOGIN}>+ Create new login…</option>
+              {accounts
+                .filter(
+                  (account) =>
+                    !staff.some(
+                      (other) => other.user === account.id && other.id !== editingId
+                    )
+                )
+                .map((account) => (
+                  <option value={account.id} key={account.id}>
+                    {account.username}
+                    {account.first_name || account.last_name
+                      ? ` — ${account.first_name} ${account.last_name}`.trimEnd()
+                      : ""}
+                  </option>
+                ))}
+            </select>
+            <div className="form-text">
+              Only Staff logins can be linked. Linking one lets that
+              person see this record on their own profile page.
+              Optional.
+            </div>
+            <FieldError errors={formErrors.user} />
+          </div>
+
+          {form.user === NEW_LOGIN && (
+            <div className="border rounded p-3 mb-3">
+              <div className="mb-3">
+                <label className="form-label">Username</label>
+                <input
+                  className="form-control"
+                  value={form.login_username}
+                  onChange={handleFormChange("login_username")}
+                  autoComplete="off"
+                  required
+                />
+                <FieldError errors={formErrors.login_username} />
+              </div>
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                className="form-control"
+                value={form.login_password}
+                onChange={handleFormChange("login_password")}
+                autoComplete="new-password"
+                required
+              />
+              <FieldError errors={formErrors.login_password} />
+              <div className="form-text">
+                Creates a Staff login. Name, email and phone are copied
+                from this record.
+              </div>
+            </div>
+          )}
+        </Modal>
       )}
 
       {deleteTarget && (
-        <>
-          <div className="modal d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog" role="document">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Delete Staff</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setDeleteTarget(null)}
-                    aria-label="Close"
-                  />
-                </div>
-                <div className="modal-body">
-                  Are you sure you want to delete{" "}
-                  <strong>{deleteTarget.full_name}</strong>? This cannot be undone.
-                </div>
-                <div className="modal-footer">
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setDeleteTarget(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button className="btn btn-danger" onClick={confirmDelete}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="modal-backdrop show" />
-        </>
+        <ConfirmModal
+          title="Delete Staff"
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        >
+          Are you sure you want to delete{" "}
+          <strong>{deleteTarget.full_name}</strong>? This cannot be undone.
+        </ConfirmModal>
       )}
     </>
   );
