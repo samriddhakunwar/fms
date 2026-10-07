@@ -59,4 +59,11 @@ export function getErrorMessage(error) {
   }
 }
 
+/** Per-field errors from a 400 response, else the general message under non_field_errors. */
+export function formErrorsFrom(error) {
+  return error.response?.status === 400 && error.response.data
+    ? error.response.data
+    : { non_field_errors: [getErrorMessage(error)] };
+}
+
 export default api;
