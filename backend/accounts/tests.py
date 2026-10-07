@@ -116,7 +116,7 @@ class RoleTableTests(APITestCase):
         self.assertFalse(ManagerProfile.objects.filter(user=user).exists())
 
     def test_superuser_gets_an_admin_row(self):
-        user = User.objects.create_superuser(username="root", password="x")
+        user = User.objects.create_superuser(username="root", email="", password="x")
         self.assertEqual(user.role, User.Role.ADMIN)
         self.assertTrue(AdminProfile.objects.filter(user=user).exists())
 

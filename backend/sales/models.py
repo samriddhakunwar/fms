@@ -135,7 +135,7 @@ class SaleItem(models.Model):
         from fms.actor import get_current_actor
 
         actor = get_current_actor()
-        if actor is None and self.sale.created_by_admin_id:
+        if actor is None and self.sale.created_by_admin:
             actor = self.sale.created_by_admin.user
         return actor
 

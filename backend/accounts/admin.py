@@ -231,7 +231,7 @@ class AdminProfileAdmin(RoleProfileAdmin):
 class ManagerProfileAdmin(RoleProfileAdmin):
     add_form = ManagerAddForm
 
-    list_display = RoleProfileAdmin.list_display + ("created_by_admin",)
+    list_display = (*RoleProfileAdmin.list_display, "created_by_admin")
     list_select_related = ("user", "created_by_admin__user")
     readonly_fields = ("user", "created_by_admin", "created_at")
     fields = readonly_fields

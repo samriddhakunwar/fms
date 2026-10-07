@@ -112,7 +112,7 @@ class Staff(models.Model):
         ordering = ["full_name"]
 
     def clean(self):
-        if self.user_id and self.user.role != User.Role.STAFF:
+        if self.user and self.user.role != User.Role.STAFF:
             raise ValidationError(
                 {"user": "Only a Staff account can be linked to a Staff record."}
             )

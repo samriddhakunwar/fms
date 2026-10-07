@@ -222,7 +222,7 @@ class ActivityLog(models.Model):
         ]
 
     def __str__(self):
-        who = self.user.username if self.user_id else "unknown"
+        who = self.user.username if self.user else "unknown"
         what = f" {self.target}" if self.target else ""
         return f"{who} {self.get_action_display()}{what} ({self.created_at:%Y-%m-%d %H:%M})"
 
