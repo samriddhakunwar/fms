@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from inventory.models import Product
@@ -97,6 +98,22 @@ class OrderSerializer(serializers.ModelSerializer):
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Customer name is required.")
+        return value
+
+    def validate_expected_delivery_date(self, value):
+        if value is None:
+            return value
+        if self.instance is None:
+            if value < timezone.localdate():
+                raise serializers.ValidationError(
+                    "Expected delivery date cannot be in the past."
+                )
+        # An existing order is checked against its own date, so orders whose
+        # delivery date has since passed can still be edited.
+        elif value < timezone.localtime(self.instance.order_date).date():
+            raise serializers.ValidationError(
+                "Expected delivery date cannot be before the order date."
+            )
         return value
 
     def validate_status(self, value):

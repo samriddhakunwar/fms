@@ -13,6 +13,13 @@ const STATUS_BADGE = {
 
 const STATUS_OPTIONS = ["PENDING", "CONFIRMED", "CANCELLED"];
 
+// Today as YYYY-MM-DD in the user's local time zone (toISOString alone is UTC).
+function todayISO() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+
 export default function OrdersPage() {
   const { role } = useAuth();
   const isAdmin = role === "ADMIN";
@@ -323,6 +330,7 @@ export default function OrdersPage() {
                 type="date"
                 className="form-control"
                 value={expectedDate}
+                min={editingId ? undefined : todayISO()}
                 onChange={(e) => setExpectedDate(e.target.value)}
               />
             </div>
