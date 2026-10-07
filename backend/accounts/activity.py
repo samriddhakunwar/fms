@@ -1,4 +1,12 @@
+from typing import TYPE_CHECKING
+
 from .models import ActivityLog
+
+if TYPE_CHECKING:
+    # Tells the type checker what the mixin is mixed into; plain object at runtime.
+    from rest_framework.viewsets import ReadOnlyModelViewSet as _ViewSetBase
+else:
+    _ViewSetBase = object
 
 
 def _object_id(value):
@@ -8,7 +16,7 @@ def _object_id(value):
         return None
 
 
-class ViewLoggingMixin:
+class ViewLoggingMixin(_ViewSetBase):
     """
     ViewSet mixin: a successful list/retrieve by one of view_log_roles writes
     an activity_log VIEW row for view_log_target. Covers the view-only

@@ -1,3 +1,5 @@
+# Historical models from apps.get_model() carry no field types.
+# pyright: reportAttributeAccessIssue=false
 from datetime import date
 from decimal import Decimal
 

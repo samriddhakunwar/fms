@@ -55,8 +55,8 @@ class SalesReport(models.Model):
         verbose_name_plural = "Sales Reports"
         ordering = ["-generated_at", "-id"]
         constraints = [
-            models.CheckConstraint(
-                check=models.Q(start_date__lte=models.F("end_date")),
+            models.CheckConstraint(  # pyright: ignore[reportCallIssue]  Django 4.2 uses check=
+                check=models.Q(start_date__lte=models.F("end_date")),  # pyright: ignore[reportCallIssue]
                 name="sales_report_start_before_end",
             ),
             at_most_one_role("admin", "manager", "sales_report_one_role"),
