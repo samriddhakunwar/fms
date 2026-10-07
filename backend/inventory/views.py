@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F
+from django.db.models import Count, F, Q
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from accounts.activity import ViewLoggingMixin
 from accounts.models import User
 from accounts.permissions import IsAdminOrManager, IsAdminOrManagerOrStaffReadOnly
-from fms.actor import ActorMixin, role_fields
+from fms.actor import ActorMixin, role_fields, stamp
 
 from .models import Product, StockMovement
 from .serializers import (
@@ -76,16 +76,14 @@ class ProductViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
-        products = self.get_queryset()
-        total = products.count()
-        low_stock = sum(1 for p in products if p.is_low_stock())
-        out_of_stock = sum(1 for p in products if p.quantity_in_stock == 0)
         return Response(
-            {
-                "total_products": total,
-                "low_stock_products": low_stock,
-                "out_of_stock_products": out_of_stock,
-            }
+            self.get_queryset().aggregate(
+                total_products=Count("id"),
+                low_stock_products=Count(
+                    "id", filter=Q(quantity_in_stock__lte=F("minimum_stock_level"))
+                ),
+                out_of_stock_products=Count("id", filter=Q(quantity_in_stock=0)),
+            )
         )
 
     @action(
@@ -116,10 +114,8 @@ class ProductViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
                 )
 
             product.quantity_in_stock = new_quantity
-            stamp = role_fields(request.user, "updated_by_")
-            for field, profile in stamp.items():
-                setattr(product, field, profile)
-            product.save(update_fields=["quantity_in_stock", "updated_at", *stamp])
+            stamped = stamp(product, request.user, "updated_by_")
+            product.save(update_fields=["quantity_in_stock", "updated_at", *stamped])
             movement = StockMovement.record(
                 product,
                 change,

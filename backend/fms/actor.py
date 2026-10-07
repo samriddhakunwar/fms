@@ -40,6 +40,14 @@ def role_fields(user, prefix=""):
     return {f"{prefix}admin": admin_of(user), f"{prefix}manager": manager_of(user)}
 
 
+def stamp(obj, user, prefix):
+    """Set obj's <prefix>admin / <prefix>manager pair from user; returns the field names."""
+    fields = role_fields(user, prefix)
+    for field, profile in fields.items():
+        setattr(obj, field, profile)
+    return list(fields)
+
+
 def role_name(admin, manager):
     """Display name of whichever of an admin / manager pair is set."""
     profile = admin or manager
