@@ -1,4 +1,4 @@
-from rest_framework import filters, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -7,6 +7,7 @@ from accounts.activity import ViewLoggingMixin
 from accounts.models import ActivityLog, User
 from accounts.permissions import IsAdminOrManagerReadOnly, IsStaff
 from fms.actor import ActorMixin, admin_of
+from fms.search import PrefixSearchFilter
 
 from .models import Staff
 from .serializers import StaffSerializer
@@ -22,8 +23,8 @@ class StaffViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     view_log_roles = (User.Role.MANAGER,)
     serializer_class = StaffSerializer
     permission_classes = [IsAdminOrManagerReadOnly]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["full_name"]
+    filter_backends = [PrefixSearchFilter]
+    search_fields = ["full_name", "email", "phone", "designation", "user__username"]
 
     def get_queryset(self):
         queryset = super().get_queryset()

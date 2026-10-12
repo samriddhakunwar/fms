@@ -1,7 +1,8 @@
-from rest_framework import filters, viewsets
+from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 
 from fms.actor import admin_of
+from fms.search import PrefixSearchFilter
 
 from .models import User
 from .permissions import IsAdmin
@@ -21,8 +22,8 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["username", "first_name", "last_name", "email"]
+    filter_backends = [PrefixSearchFilter]
+    search_fields = ["username", "first_name", "last_name", "email", "role"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -36,7 +37,7 @@ class RoleAccountViewSet(viewsets.ModelViewSet):
     role_value: str = ""
     profile_attr: str = ""
     permission_classes = [IsAdmin]
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [PrefixSearchFilter]
     search_fields = ["username", "first_name", "last_name", "email"]
 
     def get_queryset(self):

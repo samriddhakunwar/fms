@@ -9,6 +9,7 @@ from accounts.activity import ViewLoggingMixin
 from accounts.models import User
 from accounts.permissions import IsAdminOrManager, IsAdminOrManagerOrStaffReadOnly
 from fms.actor import ActorMixin, role_fields, stamp
+from fms.search import PrefixSearchFilter
 
 from .models import Product, StockMovement
 from .serializers import (
@@ -35,7 +36,7 @@ class ProductViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     view_log_roles = (User.Role.STAFF,)
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrManagerOrStaffReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [PrefixSearchFilter, filters.OrderingFilter]
     search_fields = ["product_name", "sku"]
     ordering_fields = ["product_name", "selling_price", "quantity_in_stock", "created_at"]
 

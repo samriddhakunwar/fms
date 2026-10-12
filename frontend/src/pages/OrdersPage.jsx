@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { ConfirmModal, Modal, StatusRow } from "../components/ui";
+import { ConfirmModal, Modal, SearchInput, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import useLiveList from "../hooks/useLiveList";
 import useLineItems from "../hooks/useLineItems";
 import api, { getErrorMessage } from "../services/api";
 
@@ -24,11 +25,17 @@ export default function OrdersPage() {
   const { role } = useAuth();
   const isAdmin = role === "ADMIN";
 
-  const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const {
+    items: orders,
+    loading,
+    busy,
+    error: listError,
+    reload: loadOrders,
+    searching,
+  } = useLiveList("/orders/", search, { status: statusFilter });
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -48,19 +55,6 @@ export default function OrdersPage() {
   const [fulfilTarget, setFulfilTarget] = useState(null);
   const [working, setWorking] = useState(false);
 
-  const loadOrders = async (params = {}) => {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await api.get("/orders/", { params });
-      setOrders(data);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadProducts = async () => {
     try {
       const { data } = await api.get("/products/");
@@ -71,17 +65,8 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    loadOrders();
     loadProducts();
   }, []);
-
-  const applyFilters = (event) => {
-    event.preventDefault();
-    const params = {};
-    if (search) params.search = search;
-    if (statusFilter) params.status = statusFilter;
-    loadOrders(params);
-  };
 
   const openForm = (order) => {
     setEditingId(order?.id ?? null);
@@ -128,7 +113,7 @@ export default function OrdersPage() {
         await api.post("/orders/", payload);
       }
       setShowForm(false);
-      await loadOrders();
+      loadOrders();
     } catch (err) {
       setFormError(getErrorMessage(err));
     } finally {
@@ -141,7 +126,7 @@ export default function OrdersPage() {
     try {
       await api.delete(`/orders/${deleteTarget.id}/`);
       setDeleteTarget(null);
-      await loadOrders();
+      loadOrders();
     } catch (err) {
       setError(getErrorMessage(err));
       setDeleteTarget(null);
@@ -159,7 +144,7 @@ export default function OrdersPage() {
       setNotice(
         `Order ${fulfilTarget.order_number} fulfilled — invoice ${data.invoice_number} raised and stock deducted.`
       );
-      await loadOrders();
+      loadOrders();
     } catch (err) {
       setError(getErrorMessage(err));
       setFulfilTarget(null);
@@ -177,14 +162,13 @@ export default function OrdersPage() {
         </button>
       </div>
 
-      <form className="row g-2 mb-3" onSubmit={applyFilters}>
+      <form className="row g-2 mb-3" onSubmit={(e) => e.preventDefault()}>
         <div className="col-auto" style={{ minWidth: "220px" }}>
-          <input
-            type="search"
-            className="form-control"
-            placeholder="Search order number or customer…"
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            placeholder="Search orders by number, customer or status…"
+            busy={busy && !loading}
           />
         </div>
         <div className="col-auto">
@@ -202,16 +186,11 @@ export default function OrdersPage() {
             ))}
           </select>
         </div>
-        <div className="col-auto">
-          <button type="submit" className="btn btn-outline-secondary">
-            Apply
-          </button>
-        </div>
       </form>
 
-      {error && (
+      {(error || listError) && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {error || listError}
         </div>
       )}
 
@@ -242,7 +221,7 @@ export default function OrdersPage() {
           </thead>
           <tbody>
             <StatusRow loading={loading} empty={orders.length === 0} colSpan={7}>
-              No orders found.
+              {searching ? "No matching records found." : "No orders found."}
             </StatusRow>
             {!loading &&
               orders.map((order) => {

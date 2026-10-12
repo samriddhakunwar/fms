@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { ConfirmModal, FieldError, Modal, StatusRow } from "../components/ui";
+import { ConfirmModal, FieldError, Modal, SearchInput, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import useLiveList from "../hooks/useLiveList";
 import api, { formErrorsFrom, getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
@@ -23,11 +24,17 @@ export default function StaffList() {
   const { role } = useAuth();
   const canManage = role === "ADMIN";
 
-  const [staff, setStaff] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const {
+    items: staff,
+    loading,
+    busy,
+    error: listError,
+    reload: loadStaff,
+    searching,
+  } = useLiveList("/staff/", search, { status: statusFilter });
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
@@ -36,19 +43,6 @@ export default function StaffList() {
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-
-  const loadStaff = async (params = {}) => {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await api.get("/staff/", { params });
-      setStaff(data);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadAccounts = async () => {
     try {
@@ -61,17 +55,8 @@ export default function StaffList() {
   };
 
   useEffect(() => {
-    loadStaff();
     if (canManage) loadAccounts();
   }, [canManage]);
-
-  const applyFilters = (event) => {
-    event.preventDefault();
-    const params = {};
-    if (search) params.search = search;
-    if (statusFilter) params.status = statusFilter;
-    loadStaff(params);
-  };
 
   const openForm = (member) => {
     setEditingId(member?.id ?? null);
@@ -115,7 +100,7 @@ export default function StaffList() {
         await api.post("/staff/", payload);
       }
       setShowForm(false);
-      await loadStaff();
+      loadStaff();
       if (form.user === NEW_LOGIN) loadAccounts();
     } catch (err) {
       setFormErrors(formErrorsFrom(err));
@@ -128,7 +113,7 @@ export default function StaffList() {
     try {
       await api.delete(`/staff/${deleteTarget.id}/`);
       setDeleteTarget(null);
-      await loadStaff();
+      loadStaff();
     } catch (err) {
       setError(getErrorMessage(err));
       setDeleteTarget(null);
@@ -146,14 +131,13 @@ export default function StaffList() {
         )}
       </div>
 
-      <form className="row g-2 mb-3" onSubmit={applyFilters}>
+      <form className="row g-2 mb-3" onSubmit={(e) => e.preventDefault()}>
         <div className="col-auto" style={{ minWidth: "220px" }}>
-          <input
-            type="search"
-            className="form-control"
-            placeholder="Search by name…"
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            placeholder="Search staff by name, phone, email or designation…"
+            busy={busy && !loading}
           />
         </div>
         <div className="col-auto">
@@ -167,16 +151,11 @@ export default function StaffList() {
             <option value="INACTIVE">Inactive</option>
           </select>
         </div>
-        <div className="col-auto">
-          <button type="submit" className="btn btn-outline-secondary">
-            Apply
-          </button>
-        </div>
       </form>
 
-      {error && (
+      {(error || listError) && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {error || listError}
         </div>
       )}
 
@@ -195,7 +174,7 @@ export default function StaffList() {
           </thead>
           <tbody>
             <StatusRow loading={loading} empty={staff.length === 0} colSpan={canManage ? 7 : 6}>
-              No staff found.
+              {searching ? "No matching records found." : "No staff found."}
             </StatusRow>
             {!loading &&
               staff.map((member) => (

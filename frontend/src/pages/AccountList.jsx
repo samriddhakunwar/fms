@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { ConfirmModal, FieldError, Modal, StatusRow } from "../components/ui";
+import { useState } from "react";
+import { ConfirmModal, FieldError, Modal, SearchInput, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import useLiveList from "../hooks/useLiveList";
 import api, { formErrorsFrom, getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
@@ -23,8 +24,15 @@ const KINDS = {
 export default function AccountList({ kind }) {
   const { endpoint, title, noun } = KINDS[kind];
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const {
+    items: users,
+    loading,
+    busy,
+    error: listError,
+    reload: loadUsers,
+    searching,
+  } = useLiveList(endpoint, search);
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
@@ -33,24 +41,6 @@ export default function AccountList({ kind }) {
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await api.get(endpoint);
-      setUsers(data);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint]);
 
   const openForm = (user) => {
     setEditingId(user?.id ?? null);
@@ -91,7 +81,7 @@ export default function AccountList({ kind }) {
         await api.post(endpoint, payload);
       }
       setShowForm(false);
-      await loadUsers();
+      loadUsers();
     } catch (err) {
       setFormErrors(formErrorsFrom(err));
     } finally {
@@ -103,7 +93,7 @@ export default function AccountList({ kind }) {
     try {
       await api.delete(`${endpoint}${deleteTarget.id}/`);
       setDeleteTarget(null);
-      await loadUsers();
+      loadUsers();
     } catch (err) {
       setError(getErrorMessage(err));
       setDeleteTarget(null);
@@ -119,9 +109,20 @@ export default function AccountList({ kind }) {
         </button>
       </div>
 
-      {error && (
+      <div className="row g-2 mb-3">
+        <div className="col-12 col-sm-auto flex-grow-1" style={{ maxWidth: "360px" }}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={`Search ${title.toLowerCase()} by username, name or email…`}
+            busy={busy && !loading}
+          />
+        </div>
+      </div>
+
+      {(error || listError) && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {error || listError}
         </div>
       )}
 
@@ -139,7 +140,7 @@ export default function AccountList({ kind }) {
           </thead>
           <tbody>
             <StatusRow loading={loading} empty={users.length === 0} colSpan={6}>
-              No {title.toLowerCase()} found.
+              {searching ? "No matching records found." : `No ${title.toLowerCase()} found.`}
             </StatusRow>
             {!loading &&
               users.map((user) => (

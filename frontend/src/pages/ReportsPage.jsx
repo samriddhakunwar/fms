@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import SalesReport from "./reports/SalesReport";
-import { StatusRow } from "../components/ui";
+import { SearchInput, StatusRow } from "../components/ui";
 import api, { getErrorMessage } from "../services/api";
 
 const MAX_DAYS = 180;
@@ -48,6 +48,16 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
+  // Narrows the rows on screen only; the downloads always contain the full report.
+  const [rowSearch, setRowSearch] = useState("");
+  const term = rowSearch.trim().toLowerCase();
+  const visibleRows = !report
+    ? []
+    : term
+      ? report.rows.filter((row) =>
+          row.some((value) => String(value ?? "").toLowerCase().startsWith(term))
+        )
+      : report.rows;
 
   const stale =
     !generated ||
@@ -227,6 +237,14 @@ export default function ReportsPage() {
                     </div>
                   ))}
                 </div>
+
+                <div className="mb-3" style={{ maxWidth: "360px" }}>
+                  <SearchInput
+                    value={rowSearch}
+                    onChange={setRowSearch}
+                    placeholder="Search rows by invoice, customer, product or SKU…"
+                  />
+                </div>
               </>
             )}
 
@@ -247,13 +265,15 @@ export default function ReportsPage() {
                 <tbody>
                   <StatusRow
                     loading={loading}
-                    empty={!report || report.rows.length === 0}
+                    empty={visibleRows.length === 0}
                     colSpan={report?.columns.length || 1}
                   >
-                    No records found for the selected date range.
+                    {report?.rows.length && term
+                      ? "No matching records found."
+                      : "No records found for the selected date range."}
                   </StatusRow>
                   {!loading &&
-                    report?.rows.map((row, index) => (
+                    visibleRows.map((row, index) => (
                       <tr key={index}>
                         {row.map((value, column) => {
                           const { type } = report.columns[column];

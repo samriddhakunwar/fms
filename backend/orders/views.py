@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.db.models import Count, Q
-from rest_framework import filters, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from accounts.permissions import IsAdmin, IsAdminOrManagerNoUpdate
 from fms.actor import ActorMixin, admin_of, role_fields
 from fms.dates import day_range_filter, parse_day_param
+from fms.search import PrefixSearchFilter
 from sales.models import Sale, SaleItem
 from sales.serializers import SaleSerializer, generate_invoice_number
 
@@ -23,8 +24,8 @@ class OrderViewSet(ActorMixin, viewsets.ModelViewSet):
     )
     serializer_class = OrderSerializer
     permission_classes = [IsAdminOrManagerNoUpdate]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["order_number", "customer_name"]
+    filter_backends = [PrefixSearchFilter]
+    search_fields = ["order_number", "customer_name", "status"]
 
     def get_queryset(self):
         queryset = super().get_queryset()

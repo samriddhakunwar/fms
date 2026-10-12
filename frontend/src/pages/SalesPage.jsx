@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { ConfirmModal, Modal, StatusRow } from "../components/ui";
+import { ConfirmModal, Modal, SearchInput, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import useLiveList from "../hooks/useLiveList";
 import useLineItems from "../hooks/useLineItems";
 import api, { getErrorMessage } from "../services/api";
 
@@ -8,12 +9,18 @@ export default function SalesPage() {
   const { role } = useAuth();
   const canManage = role === "ADMIN";
 
-  const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState(true);
+  const {
+    items: sales,
+    loading,
+    busy,
+    error: listError,
+    reload: loadSales,
+    searching,
+  } = useLiveList("/sales/", search, { start_date: startDate, end_date: endDate });
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
@@ -28,19 +35,6 @@ export default function SalesPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadSales = async (params = {}) => {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await api.get("/sales/", { params });
-      setSales(data);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadProducts = async () => {
     try {
       const { data } = await api.get("/products/");
@@ -51,18 +45,8 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
-    loadSales();
     loadProducts();
   }, []);
-
-  const applyFilters = (event) => {
-    event.preventDefault();
-    const params = {};
-    if (search) params.search = search;
-    if (startDate) params.start_date = startDate;
-    if (endDate) params.end_date = endDate;
-    loadSales(params);
-  };
 
   const openForm = (sale) => {
     setEditingId(sale?.id ?? null);
@@ -136,14 +120,13 @@ export default function SalesPage() {
         )}
       </div>
 
-      <form className="row g-2 mb-3" onSubmit={applyFilters}>
+      <form className="row g-2 mb-3" onSubmit={(e) => e.preventDefault()}>
         <div className="col-auto" style={{ minWidth: "220px" }}>
-          <input
-            type="search"
-            className="form-control"
-            placeholder="Search invoice number…"
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            placeholder="Search sales by invoice, customer or order…"
+            busy={busy && !loading}
           />
         </div>
         <div className="col-auto">
@@ -162,16 +145,11 @@ export default function SalesPage() {
             onChange={(e) => setEndDate(e.target.value)}
           />
         </div>
-        <div className="col-auto">
-          <button type="submit" className="btn btn-outline-secondary">
-            Apply
-          </button>
-        </div>
       </form>
 
-      {error && (
+      {(error || listError) && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {error || listError}
         </div>
       )}
 
@@ -188,7 +166,7 @@ export default function SalesPage() {
           </thead>
           <tbody>
             <StatusRow loading={loading} empty={sales.length === 0} colSpan={5}>
-              No sales recorded.
+              {searching ? "No matching records found." : "No sales recorded."}
             </StatusRow>
             {!loading &&
               sales.map((sale) => (

@@ -1,6 +1,6 @@
 from django.db.models import Count, Sum
 from django.utils import timezone
-from rest_framework import filters, viewsets
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -9,6 +9,7 @@ from accounts.activity import ViewLoggingMixin
 from accounts.models import User
 from fms.actor import ActorMixin, admin_of
 from fms.dates import day_range_filter, parse_day_param
+from fms.search import PrefixSearchFilter
 
 from .models import Sale
 from .serializers import SaleSerializer
@@ -22,8 +23,8 @@ class SaleViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     view_log_roles = (User.Role.MANAGER,)
     serializer_class = SaleSerializer
     permission_classes = [IsAdminOrManagerReadOnly]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["invoice_number", "sold_to"]
+    filter_backends = [PrefixSearchFilter]
+    search_fields = ["invoice_number", "sold_to", "order__order_number"]
 
     def get_queryset(self):
         queryset = super().get_queryset()

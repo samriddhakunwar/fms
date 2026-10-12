@@ -94,3 +94,26 @@ export function StatusRow({ loading, empty, colSpan, children }) {
 export function FieldError({ errors }) {
   return errors ? <div className="text-danger small">{errors[0]}</div> : null;
 }
+
+/** Live search box; `busy` shows a small spinner while results are refreshing. */
+export function SearchInput({ value, onChange, placeholder, busy }) {
+  return (
+    <div className="position-relative">
+      <input
+        type="search"
+        className="form-control"
+        placeholder={placeholder}
+        aria-label={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {busy && (
+        <span
+          className="spinner-border spinner-border-sm text-secondary position-absolute top-50 end-0 translate-middle-y me-4"
+          role="status"
+          aria-label="Searching"
+        />
+      )}
+    </div>
+  );
+}

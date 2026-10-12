@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { ConfirmModal, FieldError, Modal, StatusRow } from "../components/ui";
+import { useState } from "react";
+import { ConfirmModal, FieldError, Modal, SearchInput, StatusRow } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import useLiveList from "../hooks/useLiveList";
 import api, { formErrorsFrom, getErrorMessage } from "../services/api";
 
 const EMPTY_FORM = {
@@ -22,9 +23,15 @@ export default function ProductList() {
   const { role } = useAuth();
   const canManage = role === "ADMIN" || role === "MANAGER";
 
-  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const {
+    items: products,
+    loading,
+    busy,
+    error: listError,
+    reload: loadProducts,
+    searching,
+  } = useLiveList("/products/", search);
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
@@ -34,30 +41,6 @@ export default function ProductList() {
   const [saving, setSaving] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
-
-  const loadProducts = async (searchTerm = "") => {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await api.get("/products/", {
-        params: searchTerm ? { search: searchTerm } : {},
-      });
-      setProducts(data);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
-    loadProducts(search);
-  };
 
   const openForm = (product) => {
     setEditingId(product?.id ?? null);
@@ -95,7 +78,7 @@ export default function ProductList() {
         await api.post("/products/", form);
       }
       setShowForm(false);
-      await loadProducts(search);
+      loadProducts();
     } catch (err) {
       setFormErrors(formErrorsFrom(err));
     } finally {
@@ -107,7 +90,7 @@ export default function ProductList() {
     try {
       await api.delete(`/products/${deleteTarget.id}/`);
       setDeleteTarget(null);
-      await loadProducts(search);
+      loadProducts();
     } catch (err) {
       setError(getErrorMessage(err));
       setDeleteTarget(null);
@@ -125,26 +108,20 @@ export default function ProductList() {
         )}
       </div>
 
-      <form className="row g-2 mb-3" onSubmit={handleSearchSubmit}>
-        <div className="col-auto flex-grow-1" style={{ maxWidth: "320px" }}>
-          <input
-            type="search"
-            className="form-control"
-            placeholder="Search by name or SKU…"
+      <div className="row g-2 mb-3">
+        <div className="col-12 col-sm-auto flex-grow-1" style={{ maxWidth: "360px" }}>
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            placeholder="Search products by name or SKU…"
+            busy={busy && !loading}
           />
         </div>
-        <div className="col-auto">
-          <button type="submit" className="btn btn-outline-secondary">
-            Search
-          </button>
-        </div>
-      </form>
+      </div>
 
-      {error && (
+      {(error || listError) && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {error || listError}
         </div>
       )}
 
@@ -163,7 +140,7 @@ export default function ProductList() {
           </thead>
           <tbody>
             <StatusRow loading={loading} empty={products.length === 0} colSpan={canManage ? 7 : 6}>
-              No products found.
+              {searching ? "No matching records found." : "No products found."}
             </StatusRow>
             {!loading &&
               products.map((product) => {
