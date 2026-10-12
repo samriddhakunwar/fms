@@ -136,7 +136,7 @@ class ProductApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Product.objects.count(), 0)
 
-    def test_search_by_name_and_sku(self):
+    def test_search_matches_name_only(self):
         Product.objects.create(
             product_name="Steel Rod",
             sku="SKU-ROD",
@@ -151,8 +151,7 @@ class ProductApiTests(APITestCase):
         self.assertEqual(by_name.data[0]["sku"], "SKU-CHAIR")
 
         by_sku = self.client.get(reverse("product-list"), {"search": "SKU-ROD"})
-        self.assertEqual(len(by_sku.data), 1)
-        self.assertEqual(by_sku.data[0]["product_name"], "Steel Rod")
+        self.assertEqual(by_sku.data, [])
 
     def test_low_stock_query_filter(self):
         Product.objects.create(

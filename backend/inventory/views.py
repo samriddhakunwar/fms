@@ -37,7 +37,7 @@ class ProductViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrManagerOrStaffReadOnly]
     filter_backends = [PrefixSearchFilter, filters.OrderingFilter]
-    search_fields = ["product_name", "sku"]
+    search_fields = ["product_name"]
     ordering_fields = ["product_name", "selling_price", "quantity_in_stock", "created_at"]
 
     def get_queryset(self):

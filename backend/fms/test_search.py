@@ -50,7 +50,7 @@ class PrefixSearchTests(APITestCase):
         self.assertEqual(products("penc"), ["Pencil"])
         self.assertEqual(products("en"), [])  # prefix only, not "contains"
         self.assertEqual(len(products("")), 5)
-        self.assertEqual(products("sku-3"), ["Bottle"])
+        self.assertEqual(products("sku"), [])  # name only, not SKU
 
     def test_sales_by_invoice_customer_or_order(self):
         sales = lambda q: self.names("/api/sales/", q, "invoice_number")

@@ -113,7 +113,7 @@ export default function ProductList() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Search products by name or SKU…"
+            placeholder="Search products by name…"
             busy={busy && !loading}
           />
         </div>
