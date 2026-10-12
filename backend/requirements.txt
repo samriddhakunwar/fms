@@ -56,6 +56,13 @@ python-dotenv==1.2.3         # Loads DB_* / SECRET_KEY from a local .env file.
 
 
 # ---------------------------------------------------------------------------
+# Report downloads
+# ---------------------------------------------------------------------------
+reportlab==5.0.1             # PDF reports (pulls in pillow).
+openpyxl==3.1.5              # Excel (.xlsx) reports.
+
+
+# ---------------------------------------------------------------------------
 # Timezone data
 # ---------------------------------------------------------------------------
 pytz==2026.3.post1           # Timezone definitions — pulled in by DRF and

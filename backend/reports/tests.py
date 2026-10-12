@@ -191,3 +191,82 @@ class SalesReportTests(APITestCase):
 
         self.assertTrue(data["truncated"])
         self.assertEqual(len(data["days_series"]), 180)
+
+
+class ReportRecordsTests(SalesReportTests):
+    """The tabular preview and its PDF / Excel downloads."""
+
+    def _get(self, start, end, user="admin_user", **extra):
+        self.client.login(username=user, password=self.password)
+        return self.client.get(
+            reverse("report_sales_records"),
+            {"start_date": start.isoformat(), "end_date": end.isoformat(), **extra},
+        )
+
+    def test_sales_rows_cover_the_range_including_the_end_date(self):
+        data = self._get(self.today - timedelta(days=1), self.today).data
+        self.assertEqual(len(data["rows"]), 2)  # the sale two days ago is excluded
+        summary = {entry["label"]: entry["value"] for entry in data["summary"]}
+        self.assertEqual(summary["Invoices"], 2)
+        self.assertEqual(Decimal(summary["Total revenue"]), Decimal("3000.00"))
+
+    def test_sale_late_on_the_end_date_is_included(self):
+        sale = self._sale(self.today - timedelta(days=5), [(self.chair, 1)])
+        sale.sale_date = sale.sale_date.replace(hour=23, minute=59, second=59)
+        sale.save(update_fields=["sale_date"])
+        day = self.today - timedelta(days=5)
+        self.assertEqual(len(self._get(day, day).data["rows"]), 1)
+
+    def test_empty_range_returns_no_rows(self):
+        far_off = self.today - timedelta(days=90)
+        self.assertEqual(self._get(far_off, far_off).data["rows"], [])
+
+    def test_bad_ranges_are_rejected(self):
+        self.client.login(username="admin_user", password=self.password)
+        url = reverse("report_sales_records")
+        for params in (
+            {},
+            {"start_date": "2026-13-01", "end_date": "2026-10-12"},
+            {"start_date": "2026-10-12", "end_date": "2026-10-01"},
+            {"start_date": "2025-01-01", "end_date": "2026-10-12"},
+            {"start_date": "2026-10-01", "end_date": "2026-10-12", "export": "csv"},
+        ):
+            self.assertEqual(self.client.get(url, params).status_code, 400, params)
+
+    def test_manager_can_read_the_rows(self):
+        response = self._get(self.today, self.today, user="manager_user")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_staff_and_anonymous_cannot_read_or_download(self):
+        response = self._get(self.today, self.today, user="employee_user", export="pdf")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.client.logout()
+        response = self.client.get(reverse("report_sales_records"))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_downloads_match_the_preview(self):
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        start = self.today - timedelta(days=1)
+        preview = self._get(start, self.today).data
+        stock_before = list(Product.objects.values_list("quantity_in_stock", flat=True))
+
+        response = self._get(start, self.today, export="xlsx")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            f"Sales_Report_{start}_to_{self.today}.xlsx", response["Content-Disposition"]
+        )
+        sheet = load_workbook(BytesIO(response.content)).active
+        invoices = [row[1] for row in sheet.iter_rows(values_only=True) if str(row[1]).startswith("INV-")]
+        self.assertEqual(invoices, [row[1] for row in preview["rows"]])
+
+        response = self._get(start, self.today, export="pdf")
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+        # Generating reports never touches stock.
+        self.assertEqual(
+            list(Product.objects.values_list("quantity_in_stock", flat=True)), stock_before
+        )

@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -11,6 +12,7 @@ from fms.actor import role_fields
 from fms.dates import day_range_filter, parse_day_param
 from sales.models import Sale
 
+from . import tables
 from .models import SalesReport
 from .serializers import SalesReportSerializer
 
@@ -168,3 +170,57 @@ def sales_report_history(request):
     """Every sales report generated so far, newest first."""
     reports = SalesReport.objects.select_related("admin__user", "manager__user")
     return Response(SalesReportSerializer(reports, many=True).data)
+
+
+EXPORTS = {
+    "pdf": (tables.as_pdf, "application/pdf"),
+    "xlsx": (
+        tables.as_xlsx,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ),
+}
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminOrManager])
+def sales_report_records(request):
+    """
+    The sales report's invoice lines for start_date..end_date (both required, both
+    inclusive). ?export=pdf or ?export=xlsx downloads the same rows as a file.
+    """
+    start = parse_day_param(request.query_params, "start_date")
+    end = parse_day_param(request.query_params, "end_date")
+    if start is None or end is None:
+        return Response(
+            {"detail": "Choose both a start date and an end date."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if start > end:
+        return Response(
+            {"detail": "start_date cannot be after end_date."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    # Same cap as the sales charts, so a preview never covers a different span.
+    if (end - start).days + 1 > MAX_DAYS:
+        return Response(
+            {"detail": f"Choose a range of at most {MAX_DAYS} days."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    export = request.query_params.get("export")
+    if export and export not in EXPORTS:
+        return Response(
+            {"detail": "export must be pdf or xlsx."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    report = tables.build_report(start, end)
+    if not export:
+        return Response(tables.as_json(report))
+
+    render, content_type = EXPORTS[export]
+    response = HttpResponse(render(report), content_type=content_type)
+    response["Content-Disposition"] = (
+        f'attachment; filename="{tables.filename(report, export)}"'
+    )
+    return response

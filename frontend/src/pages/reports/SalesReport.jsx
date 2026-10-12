@@ -37,51 +37,34 @@ const EMPTY_REPORT = {
   products: [],
 };
 
-export default function SalesReport() {
+/** Charts and headline figures for a range the Reports page has already validated. */
+export default function SalesReport({ startDate, endDate }) {
   const [report, setReport] = useState(EMPTY_REPORT);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [filtered, setFiltered] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = async (start, end) => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError("");
-    try {
-      const params = {};
-      if (start) params.start_date = start;
-      if (end) params.end_date = end;
-      const { data } = await api.get("/reports/sales/", { params });
-      setReport(data);
-      setFiltered(Boolean(start || end));
-    } catch (err) {
-      setError(getErrorMessage(err));
-      setReport(EMPTY_REPORT);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load("", "");
-  }, []);
+    api
+      .get("/reports/sales/", { params: { start_date: startDate, end_date: endDate } })
+      .then(({ data }) => !cancelled && setReport(data))
+      .catch((err) => {
+        if (cancelled) return;
+        setError(getErrorMessage(err));
+        setReport(EMPTY_REPORT);
+      })
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [startDate, endDate]);
 
   const series = useMemo(
     () => labelDays(report.days_series),
     [report.days_series]
   );
-
-  const applyFilters = (event) => {
-    event.preventDefault();
-    load(startDate, endDate);
-  };
-
-  const resetFilters = () => {
-    setStartDate("");
-    setEndDate("");
-    load("", "");
-  };
 
   const { totals } = report;
 
@@ -121,53 +104,9 @@ export default function SalesReport() {
 
   return (
     <>
-      <form className="row g-2 mb-3 align-items-center" onSubmit={applyFilters}>
-        <div className="col-auto">
-          <input
-            type="date"
-            className="form-control"
-            aria-label="Start date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </div>
-        <div className="col-auto">
-          <input
-            type="date"
-            className="form-control"
-            aria-label="End date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </div>
-        <div className="col-auto">
-          <button type="submit" className="btn btn-outline-secondary">
-            Apply
-          </button>
-        </div>
-        {filtered && (
-          <div className="col-auto">
-            <button
-              type="button"
-              className="btn btn-link px-0"
-              onClick={resetFilters}
-            >
-              Clear
-            </button>
-          </div>
-        )}
-      </form>
-
       {error && (
         <div className="alert alert-danger" role="alert">
           {error}
-        </div>
-      )}
-
-      {report.truncated && (
-        <div className="alert alert-warning py-2" role="alert">
-          That range was longer than 180 days, so the report covers the first
-          180 days of it.
         </div>
       )}
 

@@ -144,5 +144,7 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
+# Lets the browser read the filename of report downloads.
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
