@@ -172,21 +172,14 @@ class AccountManagementApiTests(APITestCase):
             username="staff_user", password=self.password, role=User.Role.STAFF
         )
 
-    def test_admin_creates_admin_account_and_admin_row(self):
+    def test_admin_cannot_create_admin_accounts(self):
         self.client.login(username="admin_user", password=self.password)
         response = self.client.post(
             reverse("admin-account-list"),
             {"username": "second_admin", "password": "SecurePass123!", "first_name": "Sec"},
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["role"], "ADMIN")
-        self.assertNotIn("password", response.data)
-
-        created = User.objects.get(username="second_admin")
-        self.assertEqual(created.role, User.Role.ADMIN)
-        self.assertTrue(created.check_password("SecurePass123!"))
-        self.assertEqual(response.data["profile_id"], created.admin_profile.pk)
-        self.assertFalse(Staff.objects.filter(user=created).exists())
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertFalse(User.objects.filter(username="second_admin").exists())
 
     def test_admin_creates_manager_account_and_manager_row(self):
         self.client.login(username="admin_user", password=self.password)
@@ -273,7 +266,7 @@ class AccountManagementApiTests(APITestCase):
 
     def test_password_is_required_on_create(self):
         self.client.login(username="admin_user", password=self.password)
-        response = self.client.post(reverse("admin-account-list"), {"username": "nopw"})
+        response = self.client.post(reverse("manager-account-list"), {"username": "nopw"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(User.objects.filter(username="nopw").exists())
 
@@ -318,7 +311,7 @@ class AccountManagementApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class AdminSelfLockoutTests(APITestCase):
+class AdminAccountsReadOnlyTests(APITestCase):
     def setUp(self):
         self.password = "TestPass123!"
         self.admin = User.objects.create_user(
@@ -329,30 +322,29 @@ class AdminSelfLockoutTests(APITestCase):
         )
         self.client.login(username="admin_user", password=self.password)
 
-    def test_admin_cannot_delete_own_account(self):
-        response = self.client.delete(reverse("admin-account-detail", args=[self.admin.id]))
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+    def test_admin_can_list_admins(self):
+        response = self.client.get(reverse("admin-account-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
 
-    def test_admin_cannot_deactivate_own_account(self):
-        response = self.client.patch(
-            reverse("admin-account-detail", args=[self.admin.id]), {"is_active": False}
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.admin.refresh_from_db()
-        self.assertTrue(self.admin.is_active)
+    def test_admin_cannot_edit_or_delete_any_admin(self):
+        for target in (self.admin, self.other_admin):
+            url = reverse("admin-account-detail", args=[target.id])
+            for method in ("put", "patch", "delete"):
+                response = getattr(self.client, method)(url, {"first_name": "X", "is_active": False})
+                self.assertEqual(
+                    response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED, (target, method)
+                )
+            target.refresh_from_db()
+            self.assertTrue(target.is_active)
+            self.assertNotEqual(target.first_name, "X")
+        self.assertEqual(AdminProfile.objects.count(), 2)
 
-    def test_admin_can_still_edit_own_name(self):
-        response = self.client.patch(
-            reverse("admin-account-detail", args=[self.admin.id]), {"first_name": "Alice"}
+    def test_admins_can_still_log_in(self):
+        self.client.logout()
+        response = self.client.post(
+            reverse("api_auth_login"),
+            {"username": "second_admin", "password": self.password},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.admin.refresh_from_db()
-        self.assertEqual(self.admin.first_name, "Alice")
-
-    def test_admin_can_delete_another_admin(self):
-        response = self.client.delete(
-            reverse("admin-account-detail", args=[self.other_admin.id])
-        )
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(AdminProfile.objects.count(), 1)
+        self.assertEqual(response.data["user"]["role"], "ADMIN")

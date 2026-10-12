@@ -34,8 +34,7 @@ export default function App() {
               <Route path="sales" element={<SalesPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="staff" element={<StaffList />} />
-              <Route path="managers" element={<AccountList key="MANAGER" kind="MANAGER" />} />
-              <Route path="admins" element={<AccountList key="ADMIN" kind="ADMIN" />} />
+              <Route path="managers" element={<AccountList kind="MANAGER" />} />
             </Route>
           </Route>
 

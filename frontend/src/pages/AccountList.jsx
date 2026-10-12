@@ -17,7 +17,6 @@ const EMPTY_FORM = {
 // Admin and Manager accounts each live in their own table; the endpoint
 // decides which one, so the role is never sent from here.
 const KINDS = {
-  ADMIN: { endpoint: "/admins/", title: "Admins", noun: "Admin" },
   MANAGER: { endpoint: "/managers/", title: "Managers", noun: "Manager" },
 };
 

@@ -12,7 +12,6 @@ export const ADMIN_NAV = [
   { label: "Reports", path: "/admin-dashboard/reports" },
   { label: "Staff", path: "/admin-dashboard/staff" },
   { label: "Managers", path: "/admin-dashboard/managers" },
-  { label: "Admins", path: "/admin-dashboard/admins" },
 ];
 
 export const MANAGER_NAV = [

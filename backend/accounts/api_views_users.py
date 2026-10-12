@@ -1,5 +1,4 @@
 from rest_framework import viewsets
-from rest_framework.exceptions import ValidationError
 
 from fms.actor import admin_of
 from fms.search import PrefixSearchFilter
@@ -47,24 +46,15 @@ class RoleAccountViewSet(viewsets.ModelViewSet):
 
 
 class AdminAccountViewSet(RoleAccountViewSet):
-    """Admin accounts (`user` + `admin`)."""
+    """
+    Admin accounts (`user` + `admin`), read-only: Admins cannot create, edit
+    or delete Admin accounts through the API.
+    """
 
     role_value = User.Role.ADMIN
     profile_attr = "admin_profile"
     serializer_class = AdminAccountSerializer
-
-    def perform_update(self, serializer):
-        instance = serializer.instance
-        is_active = serializer.validated_data.get("is_active", instance.is_active)
-        if instance == self.request.user and not is_active:
-            raise ValidationError({"is_active": "You cannot deactivate your own account."})
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        if instance == self.request.user:
-            raise ValidationError({"detail": "You cannot delete your own account."})
-        # Deleting the login cascades to its Admin row.
-        super().perform_destroy(instance)
+    http_method_names = ["get", "head", "options"]
 
 
 class ManagerAccountViewSet(RoleAccountViewSet):
