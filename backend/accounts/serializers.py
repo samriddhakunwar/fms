@@ -98,13 +98,9 @@ class ManagerAccountSerializer(RoleAccountSerializer):
     role_value = User.Role.MANAGER
     profile_attr = "manager_profile"
 
-    created_by_admin_name = serializers.SerializerMethodField()
+    created_by_admin_name = serializers.StringRelatedField(
+        source="manager_profile.created_by_admin", default=None
+    )
 
     class Meta(RoleAccountSerializer.Meta):
         fields = RoleAccountSerializer.Meta.fields + ["created_by_admin_name"]
-
-    def get_created_by_admin_name(self, obj):
-        profile = getattr(obj, "manager_profile", None)
-        if profile is None or profile.created_by_admin_id is None:
-            return None
-        return str(profile.created_by_admin)

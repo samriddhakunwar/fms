@@ -1,26 +1,90 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone as dt_timezone
 from decimal import Decimal
-from typing import Any
 
 from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Sum
-from django.utils import timezone
 
 from fms.dates import day_range_filter
 
+PASSWORD = "FMS@1234"  # same password for every seed user
 
-# Helpers
-def ok(label: str) -> None:
+# username, first_name, last_name, role, phone (email is <first_name>@fms.local)
+USERS = [
+    ("alice_admin", "Alice", "Rahman", "ADMIN", "01711-000001"),
+    ("bob_inv", "Bob", "Hossain", "MANAGER", "01711-000002"),
+    ("carol_inv", "Carol", "Akter", "MANAGER", "01711-000003"),
+    ("dan_emp", "Dan", "Miah", "STAFF", "01711-000004"),
+    ("eva_emp", "Eva", "Begum", "STAFF", "01711-000005"),
+]
+
+# sku, name, description, price, stock, minimum
+PRODUCTS = [
+    ("PRD-001", "Industrial Bolt Set (M12)", "High-tensile steel bolts used in heavy machinery assemblies.", "1250.00", 500, 50),
+    ("PRD-002", "Bearing Unit 6205", "Deep-groove ball bearing for conveyor belt rollers.", "875.50", 200, 30),
+    ("PRD-003", "Hydraulic Seal Kit", "Replacement seal kit for hydraulic press cylinders.", "3400.00", 80, 10),
+    ("PRD-004", "Safety Gloves (Leather)", "Heat-resistant leather gloves for welding and cutting tasks.", "320.00", 15, 20),
+    ("PRD-005", "Welding Electrode E6013", "General-purpose mild-steel welding electrode, 3.2 mm diameter.", "540.00", 1000, 100),
+]
+
+# full_name, email, phone, address, designation, joining_date, salary, active,
+# login username, manager username. Everyone was added by alice_admin.
+STAFF = [
+    ("Md. Rafiqul Islam", "rafiq@fms.local", "01811-100001", "12, Mirpur Road, Dhaka", "Machine Operator", "2022-03-15", "28000.00", True, "dan_emp", "bob_inv"),
+    ("Nasrin Khanam", "nasrin@fms.local", "01811-100002", "45, Gulshan Avenue, Dhaka", "Quality Inspector", "2021-07-01", "32000.00", True, "eva_emp", "bob_inv"),
+    ("Karim Bepari", "karim@fms.local", "01811-100003", "7, BSCIC Industrial Area, Chittagong", "Warehouse Supervisor", "2020-01-10", "38000.00", True, None, "bob_inv"),
+    ("Ritu Rani Das", "ritu@fms.local", "01811-100004", "33, Tejgaon, Dhaka", "Production Technician", "2023-05-20", "25000.00", True, None, "carol_inv"),
+    ("Sohel Mahmud", "sohel@fms.local", "01811-100005", "22, Narayanganj Industrial Zone", "Maintenance Engineer", "2019-11-03", "45000.00", False, None, "carol_inv"),
+]
+
+
+def utc(*args):
+    return datetime(*args, tzinfo=dt_timezone.utc)
+
+
+# order_number, customer, product index, quantity, status, order_date.
+# Bob (Manager) took the first three orders, Alice (Admin) the rest.
+ORDERS = [
+    ("ORD-2026-0001", "Shyam Pvt. Ltd.", 0, 20, "PENDING", utc(2026, 8, 1, 9)),
+    ("ORD-2026-0002", "Himalaya Trading Concern", 1, 12, "CONFIRMED", utc(2026, 8, 4, 11)),
+    ("ORD-2026-0003", "Sita Hardware Suppliers", 2, 4, "PENDING", utc(2026, 8, 9, 14)),
+    ("ORD-2026-0004", "Gorkha Construction Pvt. Ltd.", 4, 60, "CONFIRMED", utc(2026, 8, 14, 10)),
+    ("ORD-2026-0005", "Annapurna Steel Udhyog", 3, 10, "CANCELLED", utc(2026, 8, 20, 16)),
+]
+
+# invoice_number, sold_to, product index, quantity, unit_price, sale_date
+SALES = [
+    ("INV-2026-0001", "Shyam Pvt. Ltd.", 0, 10, "1250.00", utc(2026, 7, 10, 9)),
+    ("INV-2026-0002", "Himalaya Trading Concern", 1, 5, "875.50", utc(2026, 7, 15, 11)),
+    ("INV-2026-0003", "Sita Hardware Suppliers", 2, 3, "3400.00", utc(2026, 7, 20, 14)),
+    ("INV-2026-0004", "Gorkha Construction Pvt. Ltd.", 4, 50, "540.00", utc(2026, 7, 25, 10)),
+    ("INV-2026-0005", "Annapurna Steel Udhyog", 0, 8, "1300.00", utc(2026, 7, 30, 16)),
+]
+
+# username, action, target
+ACTIVITY = [
+    ("alice_admin", "LOGIN", ""),
+    ("bob_inv", "LOGIN", ""),
+    ("bob_inv", "VIEW", "staff"),
+    ("bob_inv", "VIEW", "sale"),
+    ("dan_emp", "LOGIN_FAILED", ""),
+    ("dan_emp", "LOGIN", ""),
+    ("dan_emp", "VIEW", "product"),
+    ("dan_emp", "VIEW", "staff"),
+    ("dan_emp", "LOGOUT", ""),
+    ("bob_inv", "LOGOUT", ""),
+]
+
+
+def ok(label):
     print(f"  ✅  {label}")
 
 
-def skip(label: str) -> None:
+def skip(label):
     print(f"  ⏭   {label} (already exists)")
 
 
-# Command
 class Command(BaseCommand):
     help = (
         "Seed mock records for every FMS model (accounts, inventory, employees, "
@@ -30,414 +94,220 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("\n🌱  Seeding FMS mock data …\n"))
-
-        users     = self._seed_users()
-        by_username = {user.username: user for user in users}
-        admin     = by_username["alice_admin"]
-        manager   = by_username["bob_inv"]
-        products  = self._seed_products(admin)
+        users = self._seed_users()
+        admin, manager = users["alice_admin"], users["bob_inv"]
+        products = self._seed_products(admin)
         self._seed_staff(users)
         self._seed_orders(products, admin, manager)
         self._seed_sales(products, admin)
         self._seed_reports(admin, manager)
-        self._seed_activity(by_username)
-
+        self._seed_activity(users)
         self.stdout.write(self.style.SUCCESS("\n✔  Seeding complete.\n"))
 
-    # accounts.User
+    def heading(self, text):
+        self.stdout.write(self.style.HTTP_INFO(text))
+
     def _seed_users(self):
-        from accounts.models import User
+        from accounts.models import ManagerProfile, User
 
-        self.stdout.write(self.style.HTTP_INFO("── accounts.User ──────────────────────────"))
-
-        records = [
-            dict(
-                username="alice_admin",
-                first_name="Alice",
-                last_name="Rahman",
-                email="alice@fms.local",
-                role=User.Role.ADMIN,
-                phone_number="01711-000001",
-                is_staff=True,
-            ),
-            dict(
-                username="bob_inv",
-                first_name="Bob",
-                last_name="Hossain",
-                email="bob@fms.local",
-                role=User.Role.MANAGER,
-                phone_number="01711-000002",
-            ),
-            dict(
-                username="carol_inv",
-                first_name="Carol",
-                last_name="Akter",
-                email="carol@fms.local",
-                role=User.Role.MANAGER,
-                phone_number="01711-000003",
-            ),
-            dict(
-                username="dan_emp",
-                first_name="Dan",
-                last_name="Miah",
-                email="dan@fms.local",
-                role=User.Role.STAFF,
-                phone_number="01711-000004",
-            ),
-            dict(
-                username="eva_emp",
-                first_name="Eva",
-                last_name="Begum",
-                email="eva@fms.local",
-                role=User.Role.STAFF,
-                phone_number="01711-000005",
-            ),
-        ]
-
-        users = []
-        for data in records:
-            username = data.pop("username")
-            if User.objects.filter(username=username).exists():
+        self.heading("── accounts.User ──────────────────────────")
+        users = {}
+        for username, first, last, role, phone in USERS:
+            user = User.objects.filter(username=username).first()
+            if user:
                 skip(f"User: {username}")
-                users.append(User.objects.get(username=username))
             else:
                 user = User.objects.create(
                     username=username,
-                    password=make_password("FMS@1234"),   # same password for all seed users
-                    **data,
+                    password=make_password(PASSWORD),
+                    first_name=first,
+                    last_name=last,
+                    email=f"{first.lower()}@fms.local",
+                    role=role,
+                    phone_number=phone,
+                    is_staff=role == User.Role.ADMIN,
                 )
                 ok(f"User: {username}  ({user.get_role_display()})")
-                users.append(user)
+            users[username] = user
 
         # Managers were created by the seeded Admin.
-        from accounts.models import ManagerProfile
-
-        admin_profile = users[0].admin_profile
         ManagerProfile.objects.filter(
-            user__in=users, created_by_admin__isnull=True
-        ).update(created_by_admin=admin_profile)
-
+            user__in=users.values(), created_by_admin__isnull=True
+        ).update(created_by_admin=users["alice_admin"].admin_profile)
         return users
 
-    # inventory.Product
     def _seed_products(self, admin):
         from inventory.models import Product, StockMovement
 
-        self.stdout.write(self.style.HTTP_INFO("\n── inventory.Product ───────────────────────"))
-
-        records = [
-            dict(
-                sku="PRD-001",
-                product_name="Industrial Bolt Set (M12)",
-                description="High-tensile steel bolts used in heavy machinery assemblies.",
-                selling_price=Decimal("1250.00"),
-                quantity_in_stock=500,
-                minimum_stock_level=50,
-            ),
-            dict(
-                sku="PRD-002",
-                product_name="Bearing Unit 6205",
-                description="Deep-groove ball bearing for conveyor belt rollers.",
-                selling_price=Decimal("875.50"),
-                quantity_in_stock=200,
-                minimum_stock_level=30,
-            ),
-            dict(
-                sku="PRD-003",
-                product_name="Hydraulic Seal Kit",
-                description="Replacement seal kit for hydraulic press cylinders.",
-                selling_price=Decimal("3400.00"),
-                quantity_in_stock=80,
-                minimum_stock_level=10,
-            ),
-            dict(
-                sku="PRD-004",
-                product_name="Safety Gloves (Leather)",
-                description="Heat-resistant leather gloves for welding and cutting tasks.",
-                selling_price=Decimal("320.00"),
-                quantity_in_stock=15,
-                minimum_stock_level=20,
-            ),
-            dict(
-                sku="PRD-005",
-                product_name="Welding Electrode E6013",
-                description="General-purpose mild-steel welding electrode, 3.2 mm diameter.",
-                selling_price=Decimal("540.00"),
-                quantity_in_stock=1000,
-                minimum_stock_level=100,
-            ),
-        ]
-
+        self.heading("\n── inventory.Product ───────────────────────")
         products = []
-        for data in records:
-            sku = data["sku"]
+        for sku, name, description, price, stock, minimum in PRODUCTS:
             product, created = Product.objects.get_or_create(
-                sku=sku, defaults={**data, "created_by_admin": admin.admin_profile}
+                sku=sku,
+                defaults=dict(
+                    product_name=name,
+                    description=description,
+                    selling_price=Decimal(price),
+                    quantity_in_stock=stock,
+                    minimum_stock_level=minimum,
+                    created_by_admin=admin.admin_profile,
+                ),
             )
             if created:
                 StockMovement.record(
-                    product,
-                    product.quantity_in_stock,
-                    StockMovement.MovementType.STOCK_IN,
-                    admin,
-                    "Opening stock",
+                    product, stock, StockMovement.MovementType.STOCK_IN, admin, "Opening stock"
                 )
-                ok(f"Product: {product.product_name}  (SKU: {sku})")
+                ok(f"Product: {name}  (SKU: {sku})")
             else:
                 if product.created_by_admin_id is None and product.created_by_manager_id is None:
                     product.created_by_admin = admin.admin_profile
                     product.save(update_fields=["created_by_admin"])
                 skip(f"Product SKU {sku}")
             products.append(product)
-
         return products
 
-    # employees.Staff
     def _seed_staff(self, users):
         from employees.models import Staff
 
-        self.stdout.write(self.style.HTTP_INFO("\n── employees.Staff ─────────────────────────"))
-
-        records: list[dict[str, Any]] = [
-            dict(
-                full_name="Md. Rafiqul Islam",
-                email="rafiq@fms.local",
-                phone="01811-100001",
-                address="12, Mirpur Road, Dhaka",
-                designation="Machine Operator",
-                joining_date="2022-03-15",
-                salary=Decimal("28000.00"),
-                status=Staff.Status.ACTIVE,
-            ),
-            dict(
-                full_name="Nasrin Khanam",
-                email="nasrin@fms.local",
-                phone="01811-100002",
-                address="45, Gulshan Avenue, Dhaka",
-                designation="Quality Inspector",
-                joining_date="2021-07-01",
-                salary=Decimal("32000.00"),
-                status=Staff.Status.ACTIVE,
-            ),
-            dict(
-                full_name="Karim Bepari",
-                email="karim@fms.local",
-                phone="01811-100003",
-                address="7, BSCIC Industrial Area, Chittagong",
-                designation="Warehouse Supervisor",
-                joining_date="2020-01-10",
-                salary=Decimal("38000.00"),
-                status=Staff.Status.ACTIVE,
-            ),
-            dict(
-                full_name="Ritu Rani Das",
-                email="ritu@fms.local",
-                phone="01811-100004",
-                address="33, Tejgaon, Dhaka",
-                designation="Production Technician",
-                joining_date="2023-05-20",
-                salary=Decimal("25000.00"),
-                status=Staff.Status.ACTIVE,
-            ),
-            dict(
-                full_name="Sohel Mahmud",
-                email="sohel@fms.local",
-                phone="01811-100005",
-                address="22, Narayanganj Industrial Zone",
-                designation="Maintenance Engineer",
-                joining_date="2019-11-03",
-                salary=Decimal("45000.00"),
-                status=Staff.Status.INACTIVE,
-            ),
-        ]
-
-        by_username = {user.username: user for user in users}
-        records[0]["user"] = by_username.get("dan_emp")
-        records[1]["user"] = by_username.get("eva_emp")
-
-        # Bob manages the first three, Carol the last two; all added by Alice.
-        bob = by_username["bob_inv"].manager_profile
-        carol = by_username["carol_inv"].manager_profile
-        for index, data in enumerate(records):
-            data["manager"] = bob if index < 3 else carol
-            data["created_by_admin"] = by_username["alice_admin"].admin_profile
-
-        employees = []
-        for data in records:
-            email = data["email"]
+        self.heading("\n── employees.Staff ─────────────────────────")
+        for (full_name, email, phone, address, designation, joined, salary,
+             active, login, manager) in STAFF:
+            data = dict(
+                full_name=full_name,
+                email=email,
+                phone=phone,
+                address=address,
+                designation=designation,
+                joining_date=joined,
+                salary=Decimal(salary),
+                status=Staff.Status.ACTIVE if active else Staff.Status.INACTIVE,
+                user=users.get(login),
+                manager=users[manager].manager_profile,
+                created_by_admin=users["alice_admin"].admin_profile,
+            )
             employee, created = Staff.objects.get_or_create(email=email, defaults=data)
-            if not created:
-                updates = [
-                    field
-                    for field in ("user", "manager", "created_by_admin")
-                    if getattr(employee, f"{field}_id") is None and data.get(field)
-                ]
-                for field in updates:
-                    setattr(employee, field, data[field])
-                if updates:
-                    employee.save(update_fields=updates)
             if created:
-                ok(f"Staff: {employee.full_name}  ({employee.designation})")
-            else:
-                skip(f"Staff email {email}")
-            employees.append(employee)
+                ok(f"Staff: {full_name}  ({designation})")
+                continue
+            # Fill in links missing from records seeded by older versions.
+            updates = [
+                field
+                for field in ("user", "manager", "created_by_admin")
+                if getattr(employee, f"{field}_id") is None and data[field]
+            ]
+            for field in updates:
+                setattr(employee, field, data[field])
+            if updates:
+                employee.save(update_fields=updates)
+            skip(f"Staff email {email}")
 
-        return employees
-
-    # orders.Order + orders.OrderItem
     def _seed_orders(self, products, admin, manager):
         from orders.models import Order, OrderItem
 
-        self.stdout.write(self.style.HTTP_INFO("\n── orders.Order + OrderItem ────────────────"))
-
-        records = [
-            ("ORD-2026-0001", "Shyam Pvt. Ltd.",               0, 20, Order.Status.PENDING,   timezone.datetime(2026, 8,  1,  9, 0, tzinfo=timezone.utc)),
-            ("ORD-2026-0002", "Himalaya Trading Concern",      1, 12, Order.Status.CONFIRMED, timezone.datetime(2026, 8,  4, 11, 0, tzinfo=timezone.utc)),
-            ("ORD-2026-0003", "Sita Hardware Suppliers",       2,  4, Order.Status.PENDING,   timezone.datetime(2026, 8,  9, 14, 0, tzinfo=timezone.utc)),
-            ("ORD-2026-0004", "Gorkha Construction Pvt. Ltd.", 4, 60, Order.Status.CONFIRMED, timezone.datetime(2026, 8, 14, 10, 0, tzinfo=timezone.utc)),
-            ("ORD-2026-0005", "Annapurna Steel Udhyog",        3, 10, Order.Status.CANCELLED, timezone.datetime(2026, 8, 20, 16, 0, tzinfo=timezone.utc)),
-        ]
-
-        # Bob (Manager) took the first three orders, Alice (Admin) the rest.
-        for index, (order_no, customer, prod_idx, qty, order_status, order_date) in enumerate(records):
+        self.heading("\n── orders.Order + OrderItem ────────────────")
+        for index, (number, customer, product_index, quantity, status, ordered) in enumerate(ORDERS):
             creator = (
                 {"created_by_manager": manager.manager_profile}
                 if index < 3
                 else {"created_by_admin": admin.admin_profile}
             )
-            if Order.objects.filter(order_number=order_no).exists():
+            if Order.objects.filter(order_number=number).exists():
                 Order.objects.filter(
-                    order_number=order_no,
+                    order_number=number,
                     created_by_admin__isnull=True,
                     created_by_manager__isnull=True,
                 ).update(**creator)
-                skip(f"Order {order_no}")
+                skip(f"Order {number}")
                 continue
 
-            product = products[prod_idx]
+            product = products[product_index]
             order = Order.objects.create(
-                order_number=order_no,
+                order_number=number,
                 customer_name=customer,
-                status=order_status,
-                order_date=order_date,
-                expected_delivery_date=(order_date + timezone.timedelta(days=7)).date(),
+                status=status,
+                order_date=ordered,
+                expected_delivery_date=(ordered + timedelta(days=7)).date(),
                 **creator,
             )
             OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=qty,
-                unit_price=product.selling_price,
+                order=order, product=product, quantity=quantity, unit_price=product.selling_price
             )
             order.recalculate_total()
-
             ok(
-                f"Order {order_no}: {qty} × {product.product_name} "
+                f"Order {number}: {quantity} × {product.product_name} "
                 f"({order.get_status_display()}, to {customer})"
             )
 
-    # sales.Sale + sales.SaleItem
     def _seed_sales(self, products, admin):
         from sales.models import Sale, SaleItem
 
-        self.stdout.write(self.style.HTTP_INFO("\n── sales.Sale + SaleItem ───────────────────"))
-
-        records = [
-            ("INV-2026-0001", "Shyam Pvt. Ltd.",              0,  10, Decimal("1250.00"), timezone.datetime(2026, 7, 10, 9,  0, tzinfo=timezone.utc)),
-            ("INV-2026-0002", "Himalaya Trading Concern",     1,   5, Decimal("875.50"),  timezone.datetime(2026, 7, 15, 11, 0, tzinfo=timezone.utc)),
-            ("INV-2026-0003", "Sita Hardware Suppliers",      2,   3, Decimal("3400.00"), timezone.datetime(2026, 7, 20, 14, 0, tzinfo=timezone.utc)),
-            ("INV-2026-0004", "Gorkha Construction Pvt. Ltd.", 4,  50, Decimal("540.00"),  timezone.datetime(2026, 7, 25, 10, 0, tzinfo=timezone.utc)),
-            ("INV-2026-0005", "Annapurna Steel Udhyog",       0,   8, Decimal("1300.00"), timezone.datetime(2026, 7, 30, 16, 0, tzinfo=timezone.utc)),
-        ]
-
-        for inv_no, sold_to, prod_idx, qty, unit_price, sale_date in records:
-            if Sale.objects.filter(invoice_number=inv_no).exists():
+        self.heading("\n── sales.Sale + SaleItem ───────────────────")
+        for number, sold_to, product_index, quantity, price, sold in SALES:
+            if Sale.objects.filter(invoice_number=number).exists():
                 Sale.objects.filter(
-                    invoice_number=inv_no, created_by_admin__isnull=True
+                    invoice_number=number, created_by_admin__isnull=True
                 ).update(created_by_admin=admin.admin_profile)
-                skip(f"Sale {inv_no}")
+                skip(f"Sale {number}")
                 continue
 
-            product = products[prod_idx]
-
-            subtotal = qty * unit_price
+            product = products[product_index]
+            unit_price = Decimal(price)
+            subtotal = quantity * unit_price
+            # created_by_admin is also credited on the SALE stock movement.
             sale = Sale.objects.create(
-                invoice_number=inv_no,
+                invoice_number=number,
                 sold_to=sold_to,
-                total_amount=subtotal,   # Single line item; equals the subtotal
-                sale_date=sale_date,
-                created_by_admin=admin.admin_profile,  # Also credited on the SALE stock movement
+                total_amount=subtotal,  # single line item
+                sale_date=sold,
+                created_by_admin=admin.admin_profile,
             )
-
-            SaleItem.objects.create(
-                sale=sale,
-                product=product,
-                quantity=qty,
-                unit_price=unit_price,
-                subtotal=subtotal,       # Provide explicitly; save() overwrites it anyway
+            SaleItem.objects.create(  # save() deducts the stock
+                sale=sale, product=product, quantity=quantity, unit_price=unit_price
             )
-
             ok(
-                f"Sale {inv_no}: {qty} × {product.product_name} "
+                f"Sale {number}: {quantity} × {product.product_name} "
                 f"@ {unit_price} = {subtotal}  (to {sold_to})"
             )
 
-    # reports.SalesReport
     def _seed_reports(self, admin, manager):
         from reports.models import SalesReport
         from sales.models import Sale, SaleItem
 
-        self.stdout.write(self.style.HTTP_INFO("\n── reports.SalesReport ─────────────────────"))
-
+        self.heading("\n── reports.SalesReport ─────────────────────")
         records = [
             (admin, {"admin": admin.admin_profile}, date(2026, 7, 1), date(2026, 7, 31)),
             (manager, {"manager": manager.manager_profile}, date(2026, 7, 10), date(2026, 7, 20)),
         ]
         for user, generated_by, start, end in records:
+            label = f"Sales report {start} – {end} by {user.username}"
             if SalesReport.objects.filter(start_date=start, end_date=end, **generated_by).exists():
-                skip(f"Sales report {start} – {end} by {user.username}")
+                skip(label)
                 continue
 
-            window = day_range_filter("sale_date", start, end)
-            sales = Sale.objects.filter(**window)
-            totals = sales.aggregate(revenue=Sum("total_amount"))
-            items = SaleItem.objects.filter(sale__in=sales).aggregate(n=Sum("quantity"))
+            sales = Sale.objects.filter(**day_range_filter("sale_date", start, end))
+            revenue = sales.aggregate(revenue=Sum("total_amount"))["revenue"]
+            items = SaleItem.objects.filter(sale__in=sales).aggregate(n=Sum("quantity"))["n"]
             SalesReport.objects.create(
                 start_date=start,
                 end_date=end,
                 sales_count=sales.count(),
-                items_sold=items["n"] or 0,
-                total_revenue=totals["revenue"] or Decimal("0"),
+                items_sold=items or 0,
+                total_revenue=revenue or Decimal("0"),
                 **generated_by,
             )
-            ok(f"Sales report {start} – {end} by {user.username}")
+            ok(label)
 
-    # accounts.ActivityLog
-    def _seed_activity(self, by_username):
+    def _seed_activity(self, users):
         from accounts.models import ActivityLog
 
-        self.stdout.write(self.style.HTTP_INFO("\n── accounts.ActivityLog ────────────────────"))
-
-        if ActivityLog.objects.filter(user__in=by_username.values()).exists():
+        self.heading("\n── accounts.ActivityLog ────────────────────")
+        if ActivityLog.objects.filter(user__in=users.values()).exists():
             skip("Activity log entries")
             return
 
-        Action = ActivityLog.Action
-        entries = [
-            ("alice_admin", Action.LOGIN, ""),
-            ("bob_inv", Action.LOGIN, ""),
-            ("bob_inv", Action.VIEW, "staff"),
-            ("bob_inv", Action.VIEW, "sale"),
-            ("dan_emp", Action.LOGIN_FAILED, ""),
-            ("dan_emp", Action.LOGIN, ""),
-            ("dan_emp", Action.VIEW, "product"),
-            ("dan_emp", Action.VIEW, "staff"),
-            ("dan_emp", Action.LOGOUT, ""),
-            ("bob_inv", Action.LOGOUT, ""),
-        ]
-        for username, action, target in entries:
-            user = by_username[username]
+        for username, action, target in ACTIVITY:
+            user = users[username]
             ActivityLog.objects.create(
                 user=user, role=user.role, action=action, target=target, ip_address="127.0.0.1"
             )
-        ok(f"{len(entries)} activity log entries")
+        ok(f"{len(ACTIVITY)} activity log entries")

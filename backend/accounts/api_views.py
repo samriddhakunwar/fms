@@ -15,52 +15,25 @@ from .models import ActivityLog, User
 from .serializers import LoginSerializer, UserSerializer
 
 
-_login_responses = {
-    200: openapi.Response(
-        description="Login successful",
-        examples={
-            "application/json": {
-                "message": "Login successful",
-                "user": {
-                    "id": 1,
-                    "username": "admin",
-                    "role": "ADMIN",
-                },
-            }
-        },
-    ),
-    400: openapi.Response(
-        description="Validation error — missing or blank fields",
-        examples={
-            "application/json": {
-                "username": ["This field is required."],
-                "password": ["This field is required."],
-            }
-        },
-    ),
-    401: openapi.Response(
-        description="Invalid credentials",
-        examples={
-            "application/json": {
-                "message": "Invalid username or password",
-            }
-        },
-    ),
-}
-
-
 @swagger_auto_schema(
     method="post",
     operation_summary="Login",
-    operation_description=(
-        "Authenticate a user with username and password.\n\n"
-        "On success the server creates a Django session (cookie) and returns "
-        "basic user info. The session can then be used with other "
-        "session-protected endpoints.\n\n"
-        "Roles: `ADMIN` | `MANAGER` | `STAFF`"
-    ),
+    operation_description="Starts a session (cookie). Roles: `ADMIN` | `MANAGER` | `STAFF`.",
     request_body=LoginSerializer,
-    responses=_login_responses,
+    responses={
+        200: openapi.Response(
+            "Login successful",
+            examples={"application/json": {
+                "message": "Login successful",
+                "user": {"id": 1, "username": "admin", "role": "ADMIN"},
+            }},
+        ),
+        400: "Missing or blank fields",
+        401: openapi.Response(
+            "Invalid credentials",
+            examples={"application/json": {"message": "Invalid username or password"}},
+        ),
+    },
     tags=["Authentication"],
 )
 @api_view(["POST"])
@@ -72,9 +45,9 @@ def api_login(request):
 
     credentials = cast(dict, serializer.validated_data)
     username = credentials["username"]
-    password = credentials["password"]
-
-    user = cast("User | None", authenticate(request, username=username, password=password))
+    user = cast(
+        "User | None", authenticate(request, username=username, password=credentials["password"])
+    )
 
     if user is None:
         # Credit the attempt to the account it targeted, when there is one.
@@ -94,11 +67,7 @@ def api_login(request):
     return Response(
         {
             "message": "Login successful",
-            "user": {
-                "id": user.pk,
-                "username": user.username,
-                "role": user.role,
-            },
+            "user": {"id": user.pk, "username": user.username, "role": user.role},
         },
         status=status.HTTP_200_OK,
     )
@@ -108,7 +77,7 @@ def api_login(request):
     method="post",
     operation_summary="Logout",
     operation_description="Ends the current session.",
-    responses={200: openapi.Response(description="Logged out")},
+    responses={200: "Logged out"},
     tags=["Authentication"],
 )
 @api_view(["POST"])
@@ -123,18 +92,8 @@ def api_logout(request):
 @swagger_auto_schema(
     method="get",
     operation_summary="Current session",
-    operation_description=(
-        "Returns the currently authenticated user, or 401 if there is no "
-        "active session. Used by the frontend to restore auth state on "
-        "page load."
-    ),
-    responses={
-        200: UserSerializer,
-        401: openapi.Response(
-            description="Not authenticated",
-            examples={"application/json": {"message": "Not authenticated"}},
-        ),
-    },
+    operation_description="The logged-in user, or 401. Used to restore auth state on page load.",
+    responses={200: UserSerializer, 401: "Not authenticated"},
     tags=["Authentication"],
 )
 @api_view(["GET"])
@@ -150,12 +109,8 @@ def api_current_user(request):
 @swagger_auto_schema(
     method="get",
     operation_summary="CSRF cookie",
-    operation_description=(
-        "Sets the csrftoken cookie. Call once before the first unsafe "
-        "(POST/PUT/PATCH/DELETE) request so the client can read the token "
-        "and send it back as the X-CSRFToken header."
-    ),
-    responses={200: openapi.Response(description="Cookie set")},
+    operation_description="Sets the csrftoken cookie; send it back as the X-CSRFToken header.",
+    responses={200: "Cookie set"},
     tags=["Authentication"],
 )
 @api_view(["GET"])
