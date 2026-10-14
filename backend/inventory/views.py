@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from accounts.activity import ViewLoggingMixin
 from accounts.models import User
 from accounts.permissions import IsAdminOrManager, IsAdminOrManagerOrStaffReadOnly
-from fms.actor import ActorMixin, role_fields, stamp
+from fms.actor import role_fields, stamp
 from fms.search import PrefixSearchFilter
 
 from .models import Product, StockMovement
@@ -28,7 +28,7 @@ ROLE_JOINS = (
 MOVEMENT_JOINS = ("product", "sale", "admin__user", "manager__user")
 
 
-class ProductViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
+class ProductViewSet(ViewLoggingMixin, viewsets.ModelViewSet):
     """Finished-products inventory."""
 
     queryset = Product.objects.select_related(*ROLE_JOINS)
