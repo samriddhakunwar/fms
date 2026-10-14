@@ -21,8 +21,8 @@ class StaffSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    manager_name = serializers.SerializerMethodField()
-    created_by_admin_name = serializers.SerializerMethodField()
+    manager_name = serializers.StringRelatedField(source="manager")
+    created_by_admin_name = serializers.StringRelatedField(source="created_by_admin")
 
     login_username = serializers.CharField(
         write_only=True, required=False, allow_blank=True, max_length=150
@@ -61,12 +61,6 @@ class StaffSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-
-    def get_manager_name(self, obj):
-        return str(obj.manager) if obj.manager_id else None
-
-    def get_created_by_admin_name(self, obj):
-        return str(obj.created_by_admin) if obj.created_by_admin_id else None
 
     def validate_user(self, value):
         if value is None:

@@ -6,14 +6,14 @@ from rest_framework.response import Response
 from accounts.activity import ViewLoggingMixin
 from accounts.models import ActivityLog, User
 from accounts.permissions import IsAdminOrManagerReadOnly, IsStaff
-from fms.actor import ActorMixin, admin_of
+from fms.actor import admin_of
 from fms.search import PrefixSearchFilter
 
 from .models import Staff
 from .serializers import StaffSerializer
 
 
-class StaffViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
+class StaffViewSet(ViewLoggingMixin, viewsets.ModelViewSet):
     """Staff HR records. Admin manages them; Manager may only view."""
 
     queryset = Staff.objects.select_related(
