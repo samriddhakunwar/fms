@@ -7,10 +7,11 @@ from rest_framework.response import Response
 
 from accounts.permissions import IsAdmin, IsAdminOrManagerNoUpdate
 from fms.actor import ActorMixin, admin_of, role_fields
-from fms.dates import day_range_filter, parse_day_param
+from fms.dates import filter_days
+from fms.numbers import unique_number
 from fms.search import PrefixSearchFilter
 from sales.models import Sale, SaleItem
-from sales.serializers import SaleSerializer, generate_invoice_number
+from sales.serializers import SaleSerializer
 
 from .models import Order
 from .serializers import OrderSerializer
@@ -29,19 +30,10 @@ class OrderViewSet(ActorMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        params = self.request.query_params
-
-        status_param = params.get("status")
+        status_param = self.request.query_params.get("status")
         if status_param:
             queryset = queryset.filter(status=status_param.upper())
-        start_date = parse_day_param(params, "start_date")
-        end_date = parse_day_param(params, "end_date")
-        if start_date or end_date:
-            queryset = queryset.filter(
-                **day_range_filter("order_date", start_date, end_date)
-            )
-
-        return queryset
+        return filter_days(queryset, self.request.query_params, "order_date")
 
     def perform_create(self, serializer):
         serializer.save(**role_fields(self.request.user, "created_by_"))
@@ -89,7 +81,7 @@ class OrderViewSet(ActorMixin, viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 sale = Sale.objects.create(
-                    invoice_number=generate_invoice_number(),
+                    invoice_number=unique_number(Sale, "invoice_number", "INV"),
                     sold_to=order.customer_name,
                     order=order,
                     created_by_admin=admin_of(request.user),

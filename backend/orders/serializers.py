@@ -1,20 +1,11 @@
-import uuid
-
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from fms.numbers import unique_number
 from inventory.models import Product
 
 from .models import Order, OrderItem
-
-
-def generate_order_number():
-    for _ in range(5):
-        candidate = f"ORD-{uuid.uuid4().hex[:10].upper()}"
-        if not Order.objects.filter(order_number=candidate).exists():
-            return candidate
-    raise RuntimeError("Could not generate a unique order number.")
 
 
 class OrderItemInputSerializer(serializers.Serializer):
@@ -48,8 +39,10 @@ class OrderSerializer(serializers.ModelSerializer):
     invoice_number = serializers.SerializerMethodField()
     # created_by / created_by_username predate the role columns; kept so
     # existing clients still get the creator's login id and username.
-    created_by = serializers.SerializerMethodField()
-    created_by_username = serializers.SerializerMethodField()
+    created_by = serializers.ReadOnlyField(source="created_by_user.pk", default=None)
+    created_by_username = serializers.ReadOnlyField(
+        source="created_by_user.username", default=None
+    )
     created_by_name = serializers.CharField(read_only=True)
 
     class Meta:
@@ -81,14 +74,6 @@ class OrderSerializer(serializers.ModelSerializer):
             "created_by_admin",
             "created_by_manager",
         ]
-
-    def get_created_by(self, obj):
-        user = obj.created_by_user
-        return user.pk if user else None
-
-    def get_created_by_username(self, obj):
-        user = obj.created_by_user
-        return user.username if user else None
 
     def get_invoice_number(self, obj):
         sale = getattr(obj, "sale", None)
@@ -152,7 +137,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             order = Order.objects.create(
-                order_number=generate_order_number(),
+                order_number=unique_number(Order, "order_number", "ORD"),
                 **validated_data,
             )
             self._write_items(order, items_data)
