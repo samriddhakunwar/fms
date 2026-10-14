@@ -23,7 +23,7 @@ def _local_day(value):
     return timezone.localtime(value).date()
 
 
-def _sales(start, end):
+def build_report(start, end):
     items = (
         SaleItem.objects.filter(**day_range_filter("sale__sale_date", start, end))
         .select_related("sale", "product")
@@ -61,17 +61,10 @@ def _sales(start, end):
             ("Total revenue", sum((row[7] for row in rows), Decimal("0")), "money"),
         ],
         "note": "One row per invoice line, by sale date.",
+        "start_date": start,
+        "end_date": end,
+        "generated_at": timezone.localtime(),
     }
-
-
-def build_report(start, end):
-    report = _sales(start, end)
-    report.update(
-        start_date=start,
-        end_date=end,
-        generated_at=timezone.localtime(),
-    )
-    return report
 
 
 def filename(report, extension):

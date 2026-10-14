@@ -93,18 +93,12 @@ def sales_report(request):
             entry["revenue"] += item.subtotal
             items_sold += item.quantity
 
+    # buckets is already in date order.
     days = [
-        {
-            "day": day.isoformat(),
-            "revenue": _money(values["revenue"]),
-            "count": values["count"],
-        }
-        for day, values in sorted(buckets.items())
+        {"day": day.isoformat(), "revenue": _money(values["revenue"]), "count": values["count"]}
+        for day, values in buckets.items()
     ]
-
-    active = [
-        (day, values) for day, values in sorted(buckets.items()) if values["count"]
-    ]
+    active = [(day, values) for day, values in buckets.items() if values["count"]]
 
     def _extreme(key, pick):
         if not active:
@@ -117,7 +111,6 @@ def sales_report(request):
         }
 
     day_count = len(days)
-
     report = SalesReport.objects.create(
         **role_fields(request.user),
         start_date=start,
