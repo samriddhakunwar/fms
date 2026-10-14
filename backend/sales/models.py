@@ -83,6 +83,20 @@ class Sale(models.Model):
             f"{self.total_amount} on {self.sale_date.strftime('%Y-%m-%d')}"
         )
 
+    def add_items(self, lines):
+        """
+        Save a SaleItem per (product, quantity, unit_price), deducting stock,
+        and set total_amount. Raises ValueError on a stock shortfall; call it
+        inside a transaction so a failed sale leaves nothing behind.
+        """
+        total = Decimal("0")
+        for product, quantity, unit_price in lines:
+            item = SaleItem(sale=self, product=product, quantity=quantity, unit_price=unit_price)
+            item.save()
+            total += item.subtotal
+        self.total_amount = total
+        self.save(update_fields=["total_amount"])
+
 
 class SaleItem(models.Model):
     sale = models.ForeignKey(

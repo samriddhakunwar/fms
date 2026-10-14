@@ -1,20 +1,10 @@
-import uuid
-from decimal import Decimal
-
 from django.db import transaction
 from rest_framework import serializers
 
+from fms.numbers import unique_number
 from inventory.models import Product
 
 from .models import Sale, SaleItem
-
-
-def generate_invoice_number():
-    for _ in range(5):
-        candidate = f"INV-{uuid.uuid4().hex[:10].upper()}"
-        if not Sale.objects.filter(invoice_number=candidate).exists():
-            return candidate
-    raise RuntimeError("Could not generate a unique invoice number.")
 
 
 class SaleItemInputSerializer(serializers.Serializer):
@@ -40,8 +30,8 @@ class SaleSerializer(serializers.ModelSerializer):
     order_number = serializers.CharField(
         source="order.order_number", read_only=True, default=None
     )
-    created_by_name = serializers.SerializerMethodField()
-    updated_by_name = serializers.SerializerMethodField()
+    created_by_name = serializers.StringRelatedField(source="created_by_admin")
+    updated_by_name = serializers.StringRelatedField(source="updated_by_admin")
 
     class Meta:
         model = Sale
@@ -72,12 +62,6 @@ class SaleSerializer(serializers.ModelSerializer):
             "updated_by_admin",
         ]
 
-    def get_created_by_name(self, obj):
-        return str(obj.created_by_admin) if obj.created_by_admin_id else None
-
-    def get_updated_by_name(self, obj):
-        return str(obj.updated_by_admin) if obj.updated_by_admin_id else None
-
     def validate_items_input(self, value):
         if not value:
             raise serializers.ValidationError("A sale must include at least one item.")
@@ -97,30 +81,20 @@ class SaleSerializer(serializers.ModelSerializer):
         return value
 
     def _write_items(self, sale, items_data):
-        total = Decimal("0")
-        for item in items_data:
-            product = item["product"]
-            sale_item = SaleItem(
-                sale=sale,
-                product=product,
-                quantity=item["quantity"],
-                unit_price=product.selling_price,
+        try:
+            sale.add_items(
+                (item["product"], item["quantity"], item["product"].selling_price)
+                for item in items_data
             )
-            try:
-                sale_item.save()
-            except ValueError as exc:
-                raise serializers.ValidationError(str(exc))
-            total += sale_item.subtotal
-
-        sale.total_amount = total
-        sale.save(update_fields=["total_amount"])
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
 
     def create(self, validated_data):
         items_data = validated_data.pop("items_input")
 
         with transaction.atomic():
             sale = Sale.objects.create(
-                invoice_number=generate_invoice_number(),
+                invoice_number=unique_number(Sale, "invoice_number", "INV"),
                 sold_to=validated_data["sold_to"],
                 created_by_admin=validated_data.get("created_by_admin"),
             )

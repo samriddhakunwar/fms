@@ -69,10 +69,7 @@ class SaleAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        if change:
-            obj.updated_by_admin = admin_of(request.user)
-        else:
-            obj.created_by_admin = admin_of(request.user)
+        setattr(obj, "updated_by_admin" if change else "created_by_admin", admin_of(request.user))
         super().save_model(request, obj, form, change)
 
 

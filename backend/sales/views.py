@@ -8,7 +8,7 @@ from accounts.permissions import IsAdminOrManagerReadOnly
 from accounts.activity import ViewLoggingMixin
 from accounts.models import User
 from fms.actor import ActorMixin, admin_of
-from fms.dates import day_range_filter, parse_day_param
+from fms.dates import day_range_filter, filter_days, parse_day_param
 from fms.search import PrefixSearchFilter
 
 from .models import Sale
@@ -30,17 +30,9 @@ class SaleViewSet(ActorMixin, ViewLoggingMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         params = self.request.query_params
         date = parse_day_param(params, "date")
-        start_date = parse_day_param(params, "start_date")
-        end_date = parse_day_param(params, "end_date")
-
         if date:
             queryset = queryset.filter(**day_range_filter("sale_date", date, date))
-        if start_date or end_date:
-            queryset = queryset.filter(
-                **day_range_filter("sale_date", start_date, end_date)
-            )
-
-        return queryset
+        return filter_days(queryset, params, "sale_date")
 
     def perform_create(self, serializer):
         serializer.save(created_by_admin=admin_of(self.request.user))

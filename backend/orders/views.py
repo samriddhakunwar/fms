@@ -10,7 +10,7 @@ from fms.actor import ActorMixin, admin_of, role_fields
 from fms.dates import filter_days
 from fms.numbers import unique_number
 from fms.search import PrefixSearchFilter
-from sales.models import Sale, SaleItem
+from sales.models import Sale
 from sales.serializers import SaleSerializer
 
 from .models import Order
@@ -86,21 +86,8 @@ class OrderViewSet(ActorMixin, viewsets.ModelViewSet):
                     order=order,
                     created_by_admin=admin_of(request.user),
                 )
-
-                total = 0
-                for item in items:
-                    sale_item = SaleItem(
-                        sale=sale,
-                        product=item.product,
-                        quantity=item.quantity,
-                        unit_price=item.unit_price,
-                    )
-                    sale_item.save()  # deducts stock, raises on a shortfall
-                    total += sale_item.subtotal
-
-                sale.total_amount = total
-                sale.save(update_fields=["total_amount"])
-
+                # Deducts stock; raises ValueError on a shortfall.
+                sale.add_items((i.product, i.quantity, i.unit_price) for i in items)
                 order.status = Order.Status.FULFILLED
                 order.save(update_fields=["status"])
         except ValueError as exc:
