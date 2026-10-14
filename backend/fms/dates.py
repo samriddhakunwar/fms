@@ -25,3 +25,10 @@ def parse_day_param(params, name):
         return date.fromisoformat(value)
     except ValueError:
         raise ValidationError({name: f"{name} must be a date in YYYY-MM-DD format."})
+
+
+def filter_days(queryset, params, field):
+    """Apply ?start_date= / ?end_date= (inclusive local days) to field."""
+    start = parse_day_param(params, "start_date")
+    end = parse_day_param(params, "end_date")
+    return queryset.filter(**day_range_filter(field, start, end))

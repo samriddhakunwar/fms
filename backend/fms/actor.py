@@ -1,15 +1,11 @@
 """
-The user behind the current API request, for code that runs below the view,
-and helpers that turn a login into the Admin / Manager record it acts as.
+Who is acting: the request user for code below the view, and helpers that turn
+a login into the Admin / Manager record it acts as.
 
-SaleItem.save and the SaleItem pre_delete signal log stock movements but never
-see the request; views using ActorMixin publish request.user here so those rows
-record who made the change. Outside such a request (Django admin, management
+SaleItem.save and its pre_delete signal log stock movements but never see the
+request (a queryset delete cannot take arguments), so views using ActorMixin
+publish request.user here. Outside such a request (Django admin, management
 commands) the actor is None and callers fall back to their own default.
-
-Who-did-what columns point at the role tables (admin / manager), not at user,
-so each one comes as a pair: role_fields(user, "created_by_") gives
-{"created_by_admin": <AdminProfile or None>, "created_by_manager": ...}.
 """
 
 from contextvars import ContextVar
@@ -62,23 +58,14 @@ class ActorMixin:
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         user = request.user
-        self._actor_token = _current_actor.set(
-            user if user and user.is_authenticated else None
-        )
-
-    def finalize_response(self, request, response, *args, **kwargs):
-        self._reset_actor()
-        return super().finalize_response(request, response, *args, **kwargs)
+        self._actor_token = _current_actor.set(user if user and user.is_authenticated else None)
 
     def dispatch(self, request, *args, **kwargs):
-        # finalize_response is skipped when an exception escapes DRF's handler;
-        # never let the actor leak into the next request on this thread.
+        # finally, not finalize_response: the actor must never leak into the
+        # next request on this thread, even when an exception escapes.
         try:
             return super().dispatch(request, *args, **kwargs)
         finally:
-            self._reset_actor()
-
-    def _reset_actor(self):
-        if self._actor_token is not None:
-            _current_actor.reset(self._actor_token)
-            self._actor_token = None
+            if self._actor_token is not None:
+                _current_actor.reset(self._actor_token)
+                self._actor_token = None
